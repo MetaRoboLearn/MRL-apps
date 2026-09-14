@@ -14,3 +14,7 @@ containerisation/nginx/ssl/
 # Backups – generated at runtime
 containerisation/backups/
 containerisation/backup_cron.log
+
+# vs code configs
+
+.vscode/

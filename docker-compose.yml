@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    networks:
+      - default
 
   backend:
     build:
@@ -23,11 +25,15 @@ services:
       - "5000:5000"
     volumes:
       - ./server/static/uploads/badges:/app/static/uploads/badges
+      - ./server/static/stickers:/app/static/stickers
     command: python app.py
+    extra_hosts:
+      - "host.docker.internal:host-gateway" #added for the purpose of local dev (so that the container can connect to external postgres instance running on the same PC)
     depends_on:
       - redis
-    volumes:
-      - ./server/static/stickers:/app/static/stickers
+    networks:
+      - default
+      
 
   frontend:
     build:
@@ -38,3 +44,8 @@ services:
       - backend
     volumes:
       - ./gui/public/models:/app/public/models
+    
+    networks:
+      - default
+
+

@@ -13,7 +13,7 @@ export const assignBadge = async (data: {
   badge_id: number
   comment?: string
 }) => {
-  const response = await fetch('/api/user-badges', {
+  const response = await fetch('/api/user-badges/', {
     credentials: 'include',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

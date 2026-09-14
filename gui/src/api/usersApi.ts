@@ -30,7 +30,7 @@ export const getUsers = async (params: {
   if (params.search) queryParams.set('search', params.search);
   if (params.order_by_username) queryParams.set('order_by_username', params.order_by_username.toString());
   
-  const response = await fetch(`/api/users?${queryParams}`, {
+  const response = await fetch(`/api/users/?${queryParams}`, {
     credentials: 'include'
   });
   return response.json();
@@ -52,7 +52,7 @@ export const getUserById = async (userId: string): Promise<User> => {
 }
 
 export const createUser = async (data: CreateUserRequest) => {
-  const response = await fetch('/api/users', {
+  const response = await fetch('/api/users/', {
     credentials: 'include',
     method: 'POST',
     headers: {
