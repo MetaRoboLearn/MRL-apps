@@ -1,7 +1,7 @@
 from sqlalchemy.orm import relationship
 
 from models.base import Base
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint
 
 class UserBadge(Base):
   __tablename__ = 'user_badges'
@@ -21,3 +21,8 @@ class UserBadge(Base):
   badge = relationship('Badge', foreign_keys="UserBadge.badge_id")
   creator = relationship('User', foreign_keys="UserBadge.created_by")
   updater = relationship('User', foreign_keys="UserBadge.updated_by")
+
+  #if a user has already been awarded a badge, they cannot be awarded the same badge again
+  __table_args__ = (
+    UniqueConstraint('user_id', 'badge_id', name='uq_user_badges'),
+    )

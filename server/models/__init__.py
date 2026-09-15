@@ -8,3 +8,5 @@ from .activity_task import Type
 from .user_started_task import UserStartedTask
 from .user_task_log import UserTaskLog
 from .user_task_log import EventType
+from .groups import Group
+from .user_groups import UserGroups
