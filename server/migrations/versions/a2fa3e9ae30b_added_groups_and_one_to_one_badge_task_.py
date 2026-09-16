@@ -59,14 +59,24 @@ def upgrade():
             nullable=False,
         )
         batch_op.create_unique_constraint('uq_badges_relevant_activity_task_id', ['relevant_activity_task_id'])
-        batch_op.create_foreign_key(None, 'activity_tasks', ['relevant_activity_task_id'], ['id'])
+        batch_op.create_foreign_key(
+            'fk_badges_relevant_activity_task_id_activity_tasks',
+            'activity_tasks',
+            ['relevant_activity_task_id'],
+            ['id'],
+        )
 
     with op.batch_alter_table('user_badges', schema=None) as batch_op:
         batch_op.create_unique_constraint('uq_user_badges', ['user_id', 'badge_id'])
 
     with op.batch_alter_table('user_groups', schema=None) as batch_op:
-        batch_op.drop_constraint(batch_op.f('user_groups_group_id_fkey'), type_='foreignkey')
-        batch_op.drop_constraint(batch_op.f('user_groups_user_id_fkey'), type_='foreignkey')
+        bind = op.get_bind()
+        for fk in sa.inspect(bind).get_foreign_keys('user_groups'):
+            if fk.get('name'):
+                batch_op.drop_constraint(fk['name'], type_='foreignkey')
+
+        batch_op.create_unique_constraint('uq_user_groups', ['user_id', 'group_id'])
+
         batch_op.create_foreign_key(
             'fk_user_groups_group_id_groups',
             'groups',
@@ -92,12 +102,21 @@ def downgrade():
         batch_op.drop_constraint('user_started_tasks_started_by_activity_task_id_key', type_='unique')
 
     with op.batch_alter_table('user_groups', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_user_groups_user_id_users', type_='foreignkey')
-        batch_op.drop_constraint('fk_user_groups_group_id_groups', type_='foreignkey')
+        bind = op.get_bind()
+        for fk in sa.inspect(bind).get_foreign_keys('user_groups'):
+            if fk.get('name'):
+                batch_op.drop_constraint(fk['name'], type_='foreignkey')
+        batch_op.drop_constraint('uq_user_groups', type_='unique')
         batch_op.create_foreign_key(
             'user_groups_group_id_fkey',
-            'activity_tasks',
+            'groups',
             ['group_id'],
+            ['id'],
+        )
+        batch_op.create_foreign_key(
+            'user_groups_user_id_fkey',
+            'users',
+            ['user_id'],
             ['id'],
         )
 
@@ -105,7 +124,7 @@ def downgrade():
         batch_op.drop_constraint('uq_user_badges', type_='unique')
 
     with op.batch_alter_table('badges', schema=None) as batch_op:
-        #batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_constraint('fk_badges_relevant_activity_task_id_activity_tasks', type_='foreignkey')
         batch_op.drop_constraint('uq_badges_relevant_activity_task_id', type_='unique')
         batch_op.drop_column('relevant_activity_task_id')
 
