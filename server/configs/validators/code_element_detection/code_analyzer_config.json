@@ -1,0 +1,23 @@
+{
+    "builtin_functions": [
+        "forward",
+        "turn_left",
+        "turn_right",
+        "display_text",
+        "display_char",
+        "display_green",
+        "display_red",
+        "display_clear",
+        "sleep",
+        "detect_object",
+        "detect_object_conf"
+    ],
+    "custom_functions": [
+        "detect_object",
+        "detect_object_conf"
+    ],
+    "custom_variable_init": [],
+    "custom_variable_use": [],
+    "custom_list": [],
+    "custom_tuple": []
+}
