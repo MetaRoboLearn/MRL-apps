@@ -67,6 +67,7 @@ class UserRepository(BaseRepository[User]):
         last_name: str,
         role_id: int,
         actor_user_id: Optional[int] = None,  # who creates this user
+        commit: bool = True,
     ) -> User:
         now = utc_now()
         user = User(
@@ -82,7 +83,9 @@ class UserRepository(BaseRepository[User]):
         )
 
         self.session.add(user)
-        self.session.commit()
+        self.session.flush()
+        if commit:
+            self.session.commit()
         self.session.refresh(user)
         return user
 

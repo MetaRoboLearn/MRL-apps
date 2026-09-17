@@ -4,6 +4,9 @@ from flask_login import current_user, login_required
 
 from auth import role_required
 from database import db_session
+from models import Role
+from repositories.group_repository import GroupRepository
+from repositories.user_groups_repository import UserGroupsRepository
 from repositories.user_repository import UserRepository
 from utils import parse_boolean_param, _to_utc_iso
 
@@ -98,6 +101,26 @@ def create_user():
 
     with db_session() as session:
         repo = UserRepository(session)
+        role = session.query(Role).filter(Role.id == int(data["role_id"])).first()
+        if not role:
+            return jsonify({"error": "Role not found"}), 404
+
+        initial_group_id = data.get("initial_group_id")
+        if role.name == "student" and initial_group_id is None:
+            return jsonify({"error": "initial_group_id is required for students"}), 400
+
+        initial_group = None
+        if initial_group_id is not None:
+            try:
+                initial_group_id = int(initial_group_id)
+            except (TypeError, ValueError):
+                return jsonify({"error": "initial_group_id must be an integer"}), 400
+
+            initial_group = GroupRepository(session).get_by_id(initial_group_id)
+            if not initial_group:
+                return jsonify({"error": "Initial group not found"}), 404
+            if current_user.role.name != "admin" and initial_group.created_by != current_user.id:
+                return jsonify({"error": "You can only assign users to your own groups"}), 403
 
         if repo.exists_username(data["username"]):
             return jsonify({"error": "Username already exists"}), 409
@@ -112,7 +135,16 @@ def create_user():
             last_name=data["last_name"],
             role_id=int(data["role_id"]),
             actor_user_id=current_user.id,
+            commit=False,
         )
+        if initial_group is not None:
+            UserGroupsRepository(session).add_member(
+                initial_group.id,
+                user.id,
+                actor_user_id=current_user.id,
+                commit=False,
+            )
+        session.commit()
         return jsonify(_user_to_dict(user)), 201
 
 
