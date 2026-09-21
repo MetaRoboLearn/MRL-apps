@@ -3,8 +3,10 @@ from datetime import date
 from sqlalchemy import and_, exists, or_
 from sqlalchemy.orm import Session, joinedload
 
+from access_policies import activity_read_scope, group_read_scope
 from models import ActivityTask, User, UserStartedTask, UserTaskLog
 from models.activity import Activity
+from models.groups import Group
 from models.user_groups import UserGroups
 
 
@@ -44,7 +46,7 @@ class AnalyticsRepository:
         )
 
         query = self._apply_access_scope(query, actor_user_id, actor_role)
-        query = self._apply_filters(query, filters)
+        query = self._apply_filters(query, filters, actor_user_id, actor_role)
         return query.order_by(UserTaskLog.user_started_task_id, UserTaskLog.created_at).all()
 
     def _apply_access_scope(self, query, actor_user_id: int, actor_role: str):
@@ -71,15 +73,24 @@ class AnalyticsRepository:
             )
         )
 
-    def _apply_filters(self, query, filters):
+    def _apply_filters(self, query, filters, actor_user_id: int, actor_role: str):
         if filters.activity_ids:
-            query = query.filter(ActivityTask.activity_id.in_(filters.activity_ids))
+            query = query.filter(
+                ActivityTask.activity_id.in_(filters.activity_ids),
+                activity_read_scope(Activity, ActivityTask, actor_user_id, actor_role),
+            )
         if filters.activity_task_ids:
             operator = ActivityTask.id.not_in if filters.ignore_activity_task_ids else ActivityTask.id.in_
-            query = query.filter(operator(filters.activity_task_ids))
+            query = query.filter(
+                operator(filters.activity_task_ids),
+                activity_read_scope(Activity, ActivityTask, actor_user_id, actor_role),
+            )
         if filters.task_ids:
             operator = ActivityTask.task_id.not_in if filters.ignore_task_ids else ActivityTask.task_id.in_
-            query = query.filter(operator(filters.task_ids))
+            query = query.filter(
+                operator(filters.task_ids),
+                activity_read_scope(Activity, ActivityTask, actor_user_id, actor_role),
+            )
         if filters.user_ids:
             query = query.filter(UserStartedTask.started_by.in_(filters.user_ids))
         if filters.group_ids:
@@ -88,6 +99,8 @@ class AnalyticsRepository:
                     and_(
                         UserGroups.user_id == UserStartedTask.started_by,
                         UserGroups.group_id.in_(filters.group_ids),
+                        UserGroups.group_id == Group.id,
+                        group_read_scope(Group, actor_user_id, actor_role),
                     )
                 )
             )

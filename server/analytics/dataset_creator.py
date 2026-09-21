@@ -23,6 +23,11 @@ EVENT_COLUMNS = (
     "task_code_template", "task_preview", "task_difficulty", "app_mode",
 )
 
+RUN_EVENTS = frozenset(("sim_run", "robot_run"))
+TERMINAL_ATTEMPT_EVENTS = frozenset(
+    ("sim_end_fail", "robot_end_fail", "sim_end_succ", "robot_end_succ", "sim_code_err", "robot_code_err")
+)
+
 
 @dataclass(frozen=True)
 class DatasetFilters:
@@ -181,6 +186,15 @@ def _process_session(group: pd.DataFrame) -> list[dict]:
     return records
 
 
+def _attempt_count(group: pd.DataFrame) -> int:
+    """Count task executions, falling back to terminal outcomes when needed."""
+    run_count = int(group["run_count"].max()) if "run_count" in group else 0
+    if run_count:
+        return run_count
+    actions = group["action_type"].dropna()
+    return int(actions.isin(TERMINAL_ATTEMPT_EVENTS).sum())
+
+
 def build_dataset(dataframe: pd.DataFrame) -> pd.DataFrame:
     """Transform event rows into the processed event-level dataset."""
     if dataframe.empty:
@@ -210,7 +224,7 @@ def build_session_summaries(processed: pd.DataFrame) -> pd.DataFrame:
             "first_attempt_at": first["session_start"],
             "last_event_at": last["timestamp"],
             "duration_seconds": round(max(0, (last["timestamp"] - first["session_start"]).total_seconds()), 2),
-            "attempt_count": int(len(group)),
+            "attempt_count": _attempt_count(group),
             "status": last["session_outcome"],
             "final_code": last["final_code"],
             "code_analysis": last["code_analysis"],
