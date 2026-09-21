@@ -16,14 +16,19 @@ bp = Blueprint("user_badges", __name__, url_prefix="/api/user-badges")
 def require_login():
     pass
 
-def _user_badge_to_dict(ub):
+def _assignment_state_dict(user_badge):
+    """Shared assignment shape reused by Assign, Update, and student portfolios."""
+    badge = user_badge.badge
     return {
-        "id": ub.id,
-        "user_id": ub.user_id,
-        "badge_id": ub.badge_id,
-        "comment": ub.comment,
-        "created_at": _to_utc_iso(ub.created_at),
-        "created_by": ub.created_by,
+        "assigned": True,
+        "user_badge_id": user_badge.id,
+        "badge_id": badge.id,
+        "title": badge.title,
+        "description": badge.description,
+        "image_url": badge.image_url,
+        "comment": user_badge.comment,
+        "created_at": _to_utc_iso(user_badge.created_at),
+        "created_by": user_badge.created_by,
     }
 
 
@@ -50,7 +55,25 @@ def assign_badge():
         except IntegrityError:
             session.rollback()
             return jsonify({"error": "This badge is already assigned to the user"}), 409
-        return jsonify(_user_badge_to_dict(user_badge)), 201
+        user_badge = repo.get_with_badge(user_badge.id)
+        return jsonify(_assignment_state_dict(user_badge)), 201
+
+
+# ---------- UPDATE BADGE COMMENT ----------
+@bp.route("/<int:user_badge_id>", methods=["PATCH"])
+@role_required('admin', 'teacher')
+def update_badge_comment(user_badge_id: int):
+    data = request.get_json(silent=True) or {}
+    with db_session() as session:
+        repo = UserBadgeRepository(session)
+        user_badge = repo.update(
+            user_badge_id,
+            comment=data.get("comment"),
+            actor_user_id=current_user.id,
+        )
+        if not user_badge:
+            return jsonify({"error": "User badge not found"}), 404
+        return jsonify(_assignment_state_dict(user_badge)), 200
 
 
 # ---------- REMOVE BADGE ----------
@@ -59,10 +82,12 @@ def assign_badge():
 def remove_badge(user_badge_id: int):
     with db_session() as session:
         repo = UserBadgeRepository(session)
+        existing = repo.get_by_id(user_badge_id)
+        badge_id = existing.badge_id if existing else None
         ok = repo.delete(user_badge_id)
         if not ok:
             return jsonify({"error": "User badge not found"}), 404
-        return jsonify({"deleted": True}), 200
+        return jsonify({"assigned": False, "user_badge_id": user_badge_id, "badge_id": badge_id}), 200
 
 
 # ---------- GET BADGES FOR CURRENT USER ----------

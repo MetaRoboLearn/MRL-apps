@@ -49,6 +49,35 @@ class AnalyticsRepository:
         query = self._apply_filters(query, filters, actor_user_id, actor_role)
         return query.order_by(UserTaskLog.user_started_task_id, UserTaskLog.created_at).all()
 
+    def is_student_accessible(self, actor_user_id: int, actor_role: str, student_id: int) -> bool:
+        """Single-student variant of the teacher branch of `_apply_access_scope`."""
+        if actor_role == "admin":
+            return True
+        if actor_role != "teacher":
+            return False
+
+        owned_group_ids = self.session.query(UserGroups.group_id).join(UserGroups.groups).filter(
+            UserGroups.groups.property.mapper.class_.created_by == actor_user_id
+        )
+        in_owned_group = exists().where(
+            and_(
+                UserGroups.user_id == student_id,
+                UserGroups.group_id.in_(owned_group_ids),
+            )
+        )
+        has_owned_attempt = exists().where(
+            and_(
+                UserStartedTask.started_by == student_id,
+                UserStartedTask.activity_task_id == ActivityTask.id,
+                ActivityTask.activity_id == Activity.id,
+                or_(
+                    Activity.created_by == actor_user_id,
+                    ActivityTask.created_by == actor_user_id,
+                ),
+            )
+        )
+        return bool(self.session.query(or_(in_owned_group, has_owned_attempt)).scalar())
+
     def _apply_access_scope(self, query, actor_user_id: int, actor_role: str):
         if actor_role == "student":
             return query.filter(UserStartedTask.started_by == actor_user_id)

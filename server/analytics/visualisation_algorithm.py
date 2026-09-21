@@ -194,6 +194,8 @@ def build_student_portfolio_data(
     badge_state: dict[int, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build one student portfolio containing per-task cards."""
+    if summaries.empty:
+        return {"student_id": student_id, "task_cards": []}
     student_summaries = summaries[summaries["user_id"] == student_id].copy()
     student_processed = processed[processed["user_id"] == student_id]
     cards = []

@@ -2,6 +2,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
 
+from access_policies import owns_group
 from models.groups import Group
 from models.user import User
 from models.user_groups import UserGroups
@@ -19,6 +20,16 @@ class GroupRepository(BaseRepository[Group]):
         if actor_role != "admin":
             query = query.filter(Group.created_by == actor_user_id)
         return query.all()
+
+    def find_inaccessible_ids(self, user, group_ids) -> list[int]:
+        """Return requested group ids the user does not own (missing ids included)."""
+        if not group_ids:
+            return []
+        requested = set(group_ids)
+        fetched = self.session.query(Group).filter(Group.id.in_(requested)).all()
+        inaccessible = {group.id for group in fetched if not owns_group(user, group)}
+        inaccessible |= requested - {group.id for group in fetched}
+        return sorted(inaccessible)
 
     def get_by_id(self, entity_id: int) -> Optional[Group]:
         return (

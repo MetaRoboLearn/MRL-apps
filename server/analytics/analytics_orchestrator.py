@@ -4,13 +4,16 @@ from typing import Any
 
 from analytics.dataset_creator import DatasetFilters, create_dataset
 from repositories.user_badge_repository import UserBadgeRepository
+from validators.llm_feedback_generator.llm_feedback_generator import LLMFeedbackGenerator
 from analytics.visualisation_algorithm import (
     _as_data_uri,
+    _json_value,
     build_student_portfolio_data,
     generate_duration_boxplot,
     generate_heatmap,
     generate_summary_metrics,
 )
+from utils import _to_utc_iso
 
 
 def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
@@ -26,6 +29,8 @@ def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
             "description": badge.description,
             "image_url": badge.image_url,
             "comment": assignment.comment,
+            "created_at": _to_utc_iso(assignment.created_at),
+            "created_by": assignment.created_by,
         }
     return state
 
@@ -64,3 +69,50 @@ def generate_student_portfolio(session, student_id: int, filters: DatasetFilters
         student_id,
         badge_state=_badge_state_for_user(session, student_id),
     )
+
+
+def build_reduced_submissions(
+    summaries,
+    badge_state: dict[int, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build the student-facing reduced submission view (no teacher-only fields)."""
+    if summaries.empty:
+        return []
+    submissions = []
+    for _, summary in summaries.sort_values("first_attempt_at").iterrows():
+        task_id = int(summary["activity_task_id"])
+        submissions.append({
+            "activity_task_id": task_id,
+            "task_id": _json_value(summary["task_id"]),
+            "task_name": _json_value(summary["task_title"]),
+            "status": _json_value(summary["status"]),
+            "attempt_date": _json_value(summary["first_attempt_at"]),
+            "attempt_count": _json_value(summary["attempt_count"]),
+            "duration_seconds": _json_value(summary["duration_seconds"]),
+            "final_code": _json_value(summary["final_code"]),
+            "code_analysis": _json_value(summary["code_analysis"]),
+            "badge": badge_state.get(task_id),
+        })
+    return submissions
+
+
+def generate_reduced_submissions(session, student_id: int) -> list[dict[str, Any]]:
+    """Generate the authenticated student's own reduced submission view."""
+    filters = DatasetFilters(user_ids=(student_id,))
+    _, summaries = create_dataset(session, filters)
+    return build_reduced_submissions(
+        summaries,
+        badge_state=_badge_state_for_user(session, student_id),
+    )
+
+
+def generate_llm_feedback(code: str, analysis: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Generate a teacher-editable comment suggestion; never persisted here."""
+    if not code or not code.strip():
+        return {"error": "code is required"}
+    try:
+        generator = LLMFeedbackGenerator()
+        suggestion = generator.generate_feedback(code, analysis)
+    except Exception as error:  # provider errors, timeouts, invalid output
+        return {"error": f"Failed to generate feedback: {error}"}
+    return {"suggestion": suggestion}

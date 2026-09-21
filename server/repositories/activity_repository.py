@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.orm import Session, joinedload, aliased
 from sqlalchemy import or_, exists
 
+from access_policies import owns_activity, owns_activity_task
 from models import ActivityTask, User
 from models.activity import Activity
 from repositories.base_repository import BaseRepository
@@ -24,6 +25,26 @@ class ActivityRepository(BaseRepository[Activity]):
             .filter(Activity.id == activity_id)
             .first()
         )
+
+    def find_inaccessible_ids(self, user, activity_ids) -> list[int]:
+        """Return requested activity ids the user cannot read (missing ids included)."""
+        if not activity_ids:
+            return []
+        requested = set(activity_ids)
+        fetched = (
+            self.session.query(Activity)
+            .options(joinedload(Activity.activity_tasks))
+            .filter(Activity.id.in_(requested))
+            .all()
+        )
+        inaccessible = {
+            activity.id
+            for activity in fetched
+            if not owns_activity(user, activity)
+            and not any(owns_activity_task(user, task) for task in activity.activity_tasks)
+        }
+        inaccessible |= requested - {activity.id for activity in fetched}
+        return sorted(inaccessible)
 
     # ---------- LIST ----------
     def list(self, *, skip: int = 0, limit: int = 50, active_only: Optional[bool] = None, search: Optional[str] = None, order_by_time_from: bool = True) -> list[Activity]:

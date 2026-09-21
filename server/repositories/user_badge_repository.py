@@ -42,3 +42,28 @@ class UserBadgeRepository(BaseRepository[UserBadge]):
             .filter(UserBadge.user_id == user_id)
             .all()
         )
+
+    def get_with_badge(self, user_badge_id: int) -> Optional[UserBadge]:
+        return (
+            self.session.query(UserBadge)
+            .options(joinedload(UserBadge.badge))
+            .filter(UserBadge.id == user_badge_id)
+            .first()
+        )
+
+    def update(
+        self,
+        user_badge_id: int,
+        *,
+        comment: Optional[str],
+        actor_user_id: Optional[int] = None,
+    ) -> Optional[UserBadge]:
+        user_badge = self.get_with_badge(user_badge_id)
+        if not user_badge:
+            return None
+        user_badge.comment = comment
+        user_badge.updated_at = utc_now()
+        user_badge.updated_by = actor_user_id
+        self.session.commit()
+        self.session.refresh(user_badge)
+        return user_badge
