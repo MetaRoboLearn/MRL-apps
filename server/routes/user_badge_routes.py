@@ -16,21 +16,6 @@ bp = Blueprint("user_badges", __name__, url_prefix="/api/user-badges")
 def require_login():
     pass
 
-def _assignment_state_dict(user_badge):
-    """Shared assignment shape reused by Assign, Update, and student portfolios."""
-    badge = user_badge.badge
-    return {
-        "assigned": True,
-        "user_badge_id": user_badge.id,
-        "badge_id": badge.id,
-        "title": badge.title,
-        "description": badge.description,
-        "image_url": badge.image_url,
-        "comment": user_badge.comment,
-        "created_at": _to_utc_iso(user_badge.created_at),
-        "created_by": user_badge.created_by,
-    }
-
 
 # ---------- ASSIGN BADGE ----------
 @bp.route("/", methods=["POST"])
@@ -56,7 +41,7 @@ def assign_badge():
             session.rollback()
             return jsonify({"error": "This badge is already assigned to the user"}), 409
         user_badge = repo.get_with_badge(user_badge.id)
-        return jsonify(_assignment_state_dict(user_badge)), 201
+        return jsonify(repo.assignment_state_dict(user_badge)), 201
 
 
 # ---------- UPDATE BADGE COMMENT ----------
@@ -73,7 +58,7 @@ def update_badge_comment(user_badge_id: int):
         )
         if not user_badge:
             return jsonify({"error": "User badge not found"}), 404
-        return jsonify(_assignment_state_dict(user_badge)), 200
+        return jsonify(repo.assignment_state_dict(user_badge)), 200
 
 
 # ---------- REMOVE BADGE ----------

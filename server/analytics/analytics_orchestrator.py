@@ -13,25 +13,14 @@ from analytics.visualisation_algorithm import (
     generate_heatmap,
     generate_summary_metrics,
 )
-from utils import _to_utc_iso
 
 
 def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
     """Return read-only badge state keyed by the linked activity task."""
+    repository = UserBadgeRepository(session)
     state = {}
-    for assignment in UserBadgeRepository(session).list_by_user(user_id):
-        badge = assignment.badge
-        state[badge.relevant_activity_task_id] = {
-            "assigned": True,
-            "user_badge_id": assignment.id,
-            "badge_id": badge.id,
-            "title": badge.title,
-            "description": badge.description,
-            "image_url": badge.image_url,
-            "comment": assignment.comment,
-            "created_at": _to_utc_iso(assignment.created_at),
-            "created_by": assignment.created_by,
-        }
+    for assignment in repository.list_by_user(user_id):
+        state[assignment.badge.relevant_activity_task_id] = repository.assignment_state_dict(assignment)
     return state
 
 
