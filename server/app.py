@@ -28,6 +28,7 @@ from auth import init_auth
 from routes import user_routes, task_routes, activity_routes, activity_task_routes, user_started_task_routes, \
     user_task_log_routes, type_routes, broker_routes, auth_routes, sandbox_routes, user_activity_task_routes, \
     badge_routes, user_badge_routes, group_routes, user_group_routes, sticker_routes, admin_routes
+from routes import analytics_routes
 import models
 
 app = Flask(__name__, static_folder='static')
@@ -75,6 +76,7 @@ app.register_blueprint(sandbox_routes.bp)
 app.register_blueprint(broker_routes.bp)
 app.register_blueprint(sticker_routes.bp)
 app.register_blueprint(admin_routes.bp)
+app.register_blueprint(analytics_routes.bp)
 broker_routes.init_broker_websocket(app)
 
 logger.info("All blueprints registered")
