@@ -1,8 +1,11 @@
 import ast
 import json
+import logging
 import os
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_CONFIG_PATH = os.path.join(
@@ -16,6 +19,7 @@ def load_config(config_path=None):
     if os.path.exists(config_path):
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
+    logger.warning("Coding-standard config not found: %s", config_path)
     return {}
 
 class CodingStandardVisitor(ast.NodeVisitor):
@@ -295,11 +299,13 @@ class CodingStandardVisitor(ast.NodeVisitor):
 
 def analyze_coding_standard(code: str, config_path: Optional[str] = None) -> dict:
     if not code or not code.strip():
+        logger.debug("Coding-standard analysis skipped for empty code")
         return {"error": "Empty code"}
 
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
+        logger.warning("Coding-standard analysis found syntax error at line %s", e.lineno)
         return {"error": f"Syntax error at line {e.lineno}: {e.msg}"}
 
     config = load_config(config_path)
@@ -332,6 +338,7 @@ def analyze_coding_standard(code: str, config_path: Optional[str] = None) -> dic
                 "sequence": list(seg), "count": len(linenos), "linenos": sorted(list(set(linenos)))
             })
 
+    logger.debug("Coding-standard analysis completed: lines=%d", len(code_lines))
     return visitor.report
 
 

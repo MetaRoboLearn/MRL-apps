@@ -1,10 +1,13 @@
 import __main__
 import ast
 import json
+import logging
 import os
 import io
 import tokenize
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_PATH = os.path.join(
     os.path.dirname(__file__),
@@ -17,6 +20,7 @@ def load_config(config_path=None):
     if os.path.exists(config_path):
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
+    logger.warning("Code analyzer config not found: %s", config_path)
     return {}
 
 class CodeAnalyzerVisitor(ast.NodeVisitor):
@@ -286,10 +290,11 @@ def extract_comments(code):
                     "text": tok.string
                 })
     except tokenize.TokenError:
-        pass # Handle incomplete strings safely
+        logger.debug("Could not tokenize incomplete code while extracting comments")
     return comments
 
 def analyze_code(code: str, config_path: Optional[str] = None) -> dict:
+    logger.debug("Starting AST code analysis: characters=%d", len(code or ""))
     config = load_config(config_path)
     code_lines = code.split('\n')
     
@@ -298,6 +303,7 @@ def analyze_code(code: str, config_path: Optional[str] = None) -> dict:
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
+        logger.warning("AST code analysis found syntax error at line %s", e.lineno)
         return {"error": str(e), "code_elements": [], "stats": {}}
         
     visitor = CodeAnalyzerVisitor(code_lines, config)
@@ -358,9 +364,11 @@ def analyze_code(code: str, config_path: Optional[str] = None) -> dict:
         stats[base_name] = (c > 0)
         stats[key] = c
 
-    return {
+    result = {
         "code_elements": code_elements,
         "stats": stats
     }
+    logger.debug("AST code analysis completed: elements=%d", len(code_elements))
+    return result
 
 

@@ -1,3 +1,4 @@
+import logging
 import time
 import json
 import os
@@ -5,6 +6,8 @@ import threading
 import requests
 import argparse
 from validators.coding_standard_analyzer import analyze_coding_standard
+
+logger = logging.getLogger(__name__)
 
 class LLMFeedbackGenerator:
     # Class-level lock to ensure only one worker triggers a model load at a time
@@ -45,6 +48,7 @@ Budi precizan, ali nemoj zvučati kao robot ili strogi profesor.
 
     def _ensure_model_loaded(self):
         """Ensures the model is loaded in LM Studio memory, polling until ready."""
+        logger.debug("Ensuring LLM model is loaded: model=%s", self.model)
         with self._load_lock:
             models_url = self.api_url.replace("/chat", "/models")
             load_url = self.api_url.replace("/chat", "/models/load")
@@ -60,16 +64,16 @@ Budi precizan, ali nemoj zvučati kao robot ili strogi profesor.
                                 return # Ready to go
                             break
             except Exception:
-                pass
+                logger.exception("Failed to inspect LLM model state: model=%s", self.model)
     
-            print(f"[LLM] Model {self.model} not found in memory. Triggering load...")
+            logger.info("LLM model not loaded; triggering load: model=%s", self.model)
             try:
                 # Trigger the load. Use a long timeout (10 mins) because LM Studio 
                 # often blocks during JIT loading, and a client disconnect (timeout) 
                 # will cause LM Studio to abort the model load.
                 requests.post(load_url, json={"model": self.model}, timeout=600)
             except Exception:
-                pass
+                logger.exception("Failed to trigger LLM model load: model=%s", self.model)
                 
             # Poll until the model appears in the loaded list
             start_time = time.time()
@@ -82,15 +86,16 @@ Budi precizan, ali nemoj zvučati kao robot ili strogi profesor.
                         for model_info in data:
                             if model_info.get("key") == self.model:
                                 if len(model_info.get("loaded_instances", [])) > 0:
-                                    print(f"[LLM] Model {self.model} is now LOADED and READY.")
+                                    logger.info("LLM model loaded and ready: model=%s", self.model)
                                     return
                 except Exception:
-                    pass
+                    logger.debug("LLM model readiness check failed", exc_info=True)
                 
                 elapsed = int(time.time() - start_time)
-                print(f"[LLM] Waiting for model to be ready... ({elapsed}s)")
+                logger.debug("Waiting for LLM model readiness: model=%s elapsed_seconds=%d", self.model, elapsed)
                 time.sleep(5)
                 
+            logger.error("LLM model failed to load within timeout: model=%s timeout_seconds=%d", self.model, timeout_limit)
             raise TimeoutError(f"Model {self.model} failed to load within {timeout_limit}s.")
 
     def unload_model(self):
@@ -99,9 +104,9 @@ Budi precizan, ali nemoj zvučati kao robot ili strogi profesor.
         try:
             # Short timeout as this should be a quick command
             requests.post(unload_url, json={"instance_id": self.model}, timeout=10.0)
-            print(f"Model {self.model} unloaded successfully.")
+            logger.info("LLM model unloaded: model=%s", self.model)
         except Exception as e:
-            print(f"Warning: Could not unload model: {e}")
+            logger.warning("Could not unload LLM model: model=%s error=%s", self.model, e, exc_info=True)
 
     def generate_feedback(self, student_code, analyzer_report=None):
         """
@@ -109,6 +114,7 @@ Budi precizan, ali nemoj zvučati kao robot ili strogi profesor.
         Includes a retry mechanism that unloads the model on timeout.
         """
         if analyzer_report is None:
+            logger.debug("Generating coding-standard analysis for LLM feedback")
             analyzer_report = analyze_coding_standard(student_code)
 
         # Merge system instructions and data into one prompt for the /api/v1/chat endpoint
@@ -124,6 +130,7 @@ Budi precizan, ali nemoj zvučati kao robot ili strogi profesor.
         max_retries = 1
         for attempt in range(max_retries + 1):
             try:
+                logger.info("Starting LLM feedback request: model=%s attempt=%d", self.model, attempt + 1)
                 # Ensure model is in memory before trying to chat
                 self._ensure_model_loaded()
                 
@@ -152,20 +159,28 @@ Budi precizan, ali nemoj zvučati kao robot ili strogi profesor.
                     
                     if self.debug:
                         self._log_debug(req_duration, full_input, answer)
-                        
+                    logger.info("LLM feedback request completed: model=%s duration_seconds=%.2f", self.model, req_duration)
                     return answer
                 
+                logger.error("LLM returned an invalid response format: model=%s", self.model)
                 return "Error generating feedback: Invalid response format from LLM."
                 
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 if attempt < max_retries:
-                    print(f"\n[LLM] Timeout/Connection error on attempt {attempt+1}. Unloading model and retrying...")
+                    logger.warning(
+                        "LLM request failed; unloading model before retry: model=%s attempt=%d error=%s",
+                        self.model,
+                        attempt + 1,
+                        e,
+                    )
                     self.unload_model()
                     time.sleep(10) # Cooldown before re-loading
                     continue
                 else:
+                    logger.error("LLM request exhausted retries: model=%s", self.model, exc_info=True)
                     return "Error generating feedback: Infinite loop?"
             except Exception as e:
+                logger.exception("LLM feedback request failed: model=%s", self.model)
                 return f"Error generating feedback: REST API: {str(e)}"
 
     def _log_debug(self, duration, prompt, answer):

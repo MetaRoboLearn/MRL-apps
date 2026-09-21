@@ -116,6 +116,7 @@ def _row_from_log(log) -> dict:
 
 def load_event_dataframe(repository: AnalyticsRepository, filters: DatasetFilters) -> pd.DataFrame:
     """Load already-authorized log events through the backend repository."""
+    logger.debug("Loading analytics events with filters=%s", filters)
     rows = [
         _row_from_log(log)
         for log in repository.list_log_rows(
@@ -127,6 +128,7 @@ def load_event_dataframe(repository: AnalyticsRepository, filters: DatasetFilter
     dataframe = pd.DataFrame(rows, columns=EVENT_COLUMNS)
     for column in ("action_time", "session_start"):
         dataframe[column] = pd.to_datetime(dataframe[column], utc=True, errors="coerce")
+    logger.info("Loaded analytics events: rows=%d", len(dataframe))
     return dataframe
 
 
@@ -198,17 +200,21 @@ def _attempt_count(group: pd.DataFrame) -> int:
 def build_dataset(dataframe: pd.DataFrame) -> pd.DataFrame:
     """Transform event rows into the processed event-level dataset."""
     if dataframe.empty:
+        logger.info("Building processed analytics dataset from empty event data")
         return pd.DataFrame()
     dataframe = dataframe.sort_values(["user_started_task_id", "action_time"])
     records = []
     for _, group in dataframe.groupby("user_started_task_id", sort=False):
         records.extend(_process_session(group))
-    return pd.DataFrame(records)
+    processed = pd.DataFrame(records)
+    logger.info("Processed analytics dataset: input_rows=%d output_rows=%d", len(dataframe), len(processed))
+    return processed
 
 
 def build_session_summaries(processed: pd.DataFrame) -> pd.DataFrame:
     """Create one derived summary row per started task for later consumers."""
     if processed.empty:
+        logger.info("Building session summaries from empty processed data")
         return pd.DataFrame()
     summaries = []
     for session_id, group in processed.groupby("user_started_task_id", sort=False):
@@ -230,11 +236,16 @@ def build_session_summaries(processed: pd.DataFrame) -> pd.DataFrame:
             "code_analysis": last["code_analysis"],
             "code_standard_analysis": last["code_standard_analysis"],
         })
-    return pd.DataFrame(summaries)
+    result = pd.DataFrame(summaries)
+    logger.info("Built analytics session summaries: rows=%d", len(result))
+    return result
 
 
 def create_dataset(session, filters: DatasetFilters) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return processed event rows and derived session summaries."""
+    logger.info("Creating analytics dataset")
     events = load_event_dataframe(AnalyticsRepository(session), filters)
     processed = build_dataset(events)
-    return processed, build_session_summaries(processed)
+    summaries = build_session_summaries(processed)
+    logger.info("Analytics dataset creation complete: processed_rows=%d summary_rows=%d", len(processed), len(summaries))
+    return processed, summaries

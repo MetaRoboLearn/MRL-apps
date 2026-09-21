@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import logging
 from typing import Any
 
 import matplotlib
@@ -12,6 +13,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.colors import BoundaryNorm, ListedColormap
+
+logger = logging.getLogger(__name__)
 
 
 OUTCOME_RANK = {
@@ -34,6 +37,9 @@ def _png_from_current_figure() -> bytes:
     try:
         plt.savefig(output, format="png", bbox_inches="tight", dpi=150)
         return output.getvalue()
+    except Exception:
+        logger.exception("Failed to render visualisation PNG")
+        raise
     finally:
         output.close()
         plt.close()
@@ -54,6 +60,7 @@ def _task_label(dataframe: pd.DataFrame) -> pd.Series:
 def generate_heatmap(dataframe: pd.DataFrame) -> bytes:
     """Return a cohort-level student/task outcome matrix as PNG bytes."""
     if dataframe.empty:
+        logger.info("Generating empty heatmap")
         return _empty_plot("No data available")
 
     values = dataframe.assign(
@@ -65,6 +72,7 @@ def generate_heatmap(dataframe: pd.DataFrame) -> bytes:
     matrix = values.pivot_table(
         index="_student", columns="_task", values="_rank", aggfunc="max", fill_value=0
     )
+    logger.debug("Generating heatmap: students=%d tasks=%d", matrix.shape[0], matrix.shape[1])
     task_labels = values.drop_duplicates("_task").set_index("_task")["_task_label"]
     matrix.columns = [task_labels.get(task, task) for task in matrix.columns]
 
@@ -86,6 +94,7 @@ def generate_heatmap(dataframe: pd.DataFrame) -> bytes:
 def generate_duration_boxplot(summaries: pd.DataFrame) -> bytes:
     """Return cohort-level task duration distributions as PNG bytes."""
     if summaries.empty:
+        logger.info("Generating empty duration boxplot")
         return _empty_plot("No data available")
 
     data = summaries.copy()
@@ -93,6 +102,7 @@ def generate_duration_boxplot(summaries: pd.DataFrame) -> bytes:
     data["_task_label"] = _task_label(data)
     data["duration_seconds"] = pd.to_numeric(data["duration_seconds"], errors="coerce").fillna(0)
     tasks = list(data["_task"].drop_duplicates())
+    logger.debug("Generating duration boxplot: summaries=%d tasks=%d", len(data), len(tasks))
     distributions = []
     for task in tasks:
         values = [
@@ -127,7 +137,15 @@ def generate_trajectory(
     if activity_task_id is not None:
         data = data[data["activity_task_id"] == activity_task_id]
     if data.empty:
+        logger.info("Generating empty trajectory: student_id=%s activity_task_id=%s", user_id, activity_task_id)
         return _empty_plot("No data available")
+
+    logger.debug(
+        "Generating trajectory: student_id=%s activity_task_id=%s rows=%d",
+        user_id,
+        activity_task_id,
+        len(data),
+    )
 
     data["timestamp"] = pd.to_datetime(data["timestamp"], utc=True, errors="coerce")
     data["code_complexity"] = pd.to_numeric(data["code_complexity"], errors="coerce").fillna(0)
@@ -157,6 +175,7 @@ def generate_trajectory(
 def generate_summary_metrics(summaries: pd.DataFrame) -> list[dict[str, Any]]:
     """Return JSON-safe metrics for the combined selected-group cohort."""
     if summaries.empty:
+        logger.info("Generating empty summary metrics")
         return [{"metric_name": "students", "value": 0}, {"metric_name": "tasks", "value": 0}]
 
     statuses = summaries["status"].astype(str)
@@ -195,6 +214,7 @@ def build_student_portfolio_data(
 ) -> dict[str, Any]:
     """Build one student portfolio containing per-task cards."""
     if summaries.empty:
+        logger.info("Building empty student portfolio: student_id=%s", student_id)
         return {"student_id": student_id, "task_cards": []}
     student_summaries = summaries[summaries["user_id"] == student_id].copy()
     student_processed = processed[processed["user_id"] == student_id]
@@ -226,4 +246,5 @@ def build_student_portfolio_data(
             "badge": badge_state.get(task_id),
         })
 
+    logger.debug("Built student portfolio: student_id=%s task_cards=%d", student_id, len(cards))
     return {"student_id": student_id, "task_cards": cards}

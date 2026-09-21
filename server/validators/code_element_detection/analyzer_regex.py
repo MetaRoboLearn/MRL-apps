@@ -1,7 +1,10 @@
 import json
+import logging
 import re
 import os
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_PATH = os.path.join(
     os.path.dirname(__file__),
@@ -14,6 +17,7 @@ def load_config(config_path=None):
     if os.path.exists(config_path):
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
+    logger.warning("Regex code analyzer config not found: %s", config_path)
     return {}
 
 def remove_strings(line):
@@ -25,6 +29,7 @@ def remove_strings(line):
     return line
 
 def analyze_code(code: str, config_path: Optional[str] = None) -> dict:
+    logger.debug("Starting regex code analysis: characters=%d", len(code or ""))
     config = load_config(config_path)
     
     custom_functions = config.get("custom_functions", [])
@@ -277,7 +282,9 @@ def analyze_code(code: str, config_path: Optional[str] = None) -> dict:
         stats[base_name] = (c > 0)
         stats[key] = c
 
-    return {
+    result = {
         "code_elements": final_elements,
         "stats": stats
     }
+    logger.debug("Regex code analysis completed: elements=%d", len(final_elements))
+    return result

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from analytics.dataset_creator import DatasetFilters, create_dataset
@@ -14,6 +15,8 @@ from analytics.visualisation_algorithm import (
     generate_summary_metrics,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
     """Return read-only badge state keyed by the linked activity task."""
@@ -26,7 +29,17 @@ def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
 
 def generate_group_analytics(session, filters: DatasetFilters) -> dict[str, Any]:
     """Generate metrics and plots for all selected groups as one cohort."""
+    logger.info(
+        "Generating group analytics for groups=%s activities=%s",
+        filters.group_ids,
+        filters.activity_ids,
+    )
     processed, summaries = create_dataset(session, filters)
+    logger.info(
+        "Group analytics dataset ready: processed_rows=%d summary_rows=%d",
+        len(processed),
+        len(summaries),
+    )
     return {
         "summary_table": generate_summary_metrics(summaries),
         "heatmap_png": _as_data_uri(generate_heatmap(processed)),
@@ -39,6 +52,12 @@ def generate_group_analytics(session, filters: DatasetFilters) -> dict[str, Any]
 
 def generate_student_portfolio(session, student_id: int, filters: DatasetFilters) -> dict[str, Any]:
     """Generate one teacher/admin student portfolio from authorized dataset rows."""
+    logger.info(
+        "Generating student portfolio for student_id=%s groups=%s activities=%s",
+        student_id,
+        filters.group_ids,
+        filters.activity_ids,
+    )
     scoped_filters = DatasetFilters(
         activity_ids=filters.activity_ids,
         activity_task_ids=filters.activity_task_ids,
@@ -52,12 +71,14 @@ def generate_student_portfolio(session, student_id: int, filters: DatasetFilters
         excluded_task_previews=filters.excluded_task_previews,
     )
     processed, summaries = create_dataset(session, scoped_filters)
-    return build_student_portfolio_data(
+    portfolio = build_student_portfolio_data(
         processed,
         summaries,
         student_id,
         badge_state=_badge_state_for_user(session, student_id),
     )
+    logger.info("Student portfolio generated: student_id=%s task_cards=%d", student_id, len(portfolio["task_cards"]))
+    return portfolio
 
 
 def build_reduced_submissions(
@@ -87,21 +108,31 @@ def build_reduced_submissions(
 
 def generate_reduced_submissions(session, student_id: int) -> list[dict[str, Any]]:
     """Generate the authenticated student's own reduced submission view."""
+    logger.info("Generating reduced submissions for student_id=%s", student_id)
     filters = DatasetFilters(user_ids=(student_id,))
     _, summaries = create_dataset(session, filters)
-    return build_reduced_submissions(
+    submissions = build_reduced_submissions(
         summaries,
         badge_state=_badge_state_for_user(session, student_id),
     )
+    logger.info("Reduced submissions generated: student_id=%s count=%d", student_id, len(submissions))
+    return submissions
 
 
 def generate_llm_feedback(code: str, analysis: dict[str, Any] | None = None) -> dict[str, Any]:
     """Generate a teacher-editable comment suggestion; never persisted here."""
     if not code or not code.strip():
+        logger.warning("LLM feedback requested without code")
         return {"error": "code is required"}
+    logger.info("Starting LLM feedback generation: analysis_supplied=%s", analysis is not None)
     try:
         generator = LLMFeedbackGenerator()
         suggestion = generator.generate_feedback(code, analysis)
     except Exception as error:  # provider errors, timeouts, invalid output
+        logger.exception("LLM feedback generation failed")
         return {"error": f"Failed to generate feedback: {error}"}
+    if suggestion.startswith("Error generating feedback"):
+        logger.warning("LLM feedback provider returned an error response")
+    else:
+        logger.info("LLM feedback generation completed")
     return {"suggestion": suggestion}
