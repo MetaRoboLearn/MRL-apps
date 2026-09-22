@@ -40,6 +40,8 @@ def get_group_members(group_id: int):
             {
                 "user_id": membership.user.id,
                 "username": membership.user.username,
+                "first_name": membership.user.first_name,
+                "last_name": membership.user.last_name,
                 "full_name": f"{membership.user.first_name} {membership.user.last_name}",
                 "role": membership.user.role.name if membership.user.role else None,
             }
@@ -76,7 +78,7 @@ def replace_group_members(group_id: int):
         if orphaned_students:
             return jsonify({
                 "error": "Cannot remove students from their last group",
-                "user_ids": orphaned_students,
+                "usernames": orphaned_students,
             }), 409
 
         try:

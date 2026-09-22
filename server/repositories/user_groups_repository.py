@@ -74,8 +74,8 @@ class UserGroupsRepository(BaseRepository[UserGroups]):
             self.session.commit()
         return membership
 
-    def list_students_with_only_membership(self, user_ids: set[int]) -> list[int]:
-        """Return candidate students whose total group count is exactly one."""
+    def list_students_with_only_membership(self, user_ids: set[int]) -> list[str]:
+        """Return usernames for candidate students whose total group count is exactly one."""
         if not user_ids:
             return []
 
@@ -89,9 +89,9 @@ class UserGroupsRepository(BaseRepository[UserGroups]):
             .subquery()
         )
         return [
-            user_id
-            for user_id, in (
-                self.session.query(User.id)
+            username
+            for username, in (
+                self.session.query(User.username)
                 .join(membership_counts, membership_counts.c.user_id == User.id)
                 .filter(
                     User.id.in_(user_ids),
@@ -106,7 +106,8 @@ class UserGroupsRepository(BaseRepository[UserGroups]):
         self,
         group_id: int,
         requested_ids: set[int],
-    ) -> list[int]:
+    ) -> list[str]:
+        """Return usernames for students orphaned by the proposed replacement."""
         current_ids = {
             user_id
             for (user_id,) in self.session.query(UserGroups.user_id)

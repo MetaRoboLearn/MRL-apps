@@ -66,7 +66,7 @@ class GroupRepository(BaseRepository[Group]):
         self.session.refresh(group)
         return group
 
-    def delete_group(self, group_id: int) -> list[int] | None:
+    def delete_group(self, group_id: int) -> list[str] | None:
         """Delete a group and memberships unless students would be orphaned."""
         group = self.get_by_id(group_id)
         if not group:
