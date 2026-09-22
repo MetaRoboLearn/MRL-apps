@@ -1,14 +1,17 @@
 import LogoWhite from '/logo_white_notext.svg'
-import {Link} from "@tanstack/react-router";
+import {Link, useLocation} from "@tanstack/react-router";
 import {useAuth} from "../../hooks/useAuth.ts";
 import {FaHouse} from "react-icons/fa6";
 import {FaUser, FaDownload} from "react-icons/fa";
-import {useState} from "react";
+import {useRef, useState} from "react";
 import {downloadDbDump} from "../../api/adminApi.ts";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const [dumping, setDumping] = useState(false);
+  const userManagementMenu = useRef<HTMLDetailsElement>(null);
+  const location = useLocation();
+  const isUsersRoute = location.pathname === '/admin/users' || location.pathname === '/admin/users/';
 
   const handleDbDump = async () => {
     setDumping(true);
@@ -41,9 +44,27 @@ const Navbar = () => {
             <Link to="/" className="[&.active]:font-bold">
               Home
             </Link>
-            <Link to="/admin/users" className="[&.active]:font-bold">
-              Users
-            </Link>
+            <details ref={userManagementMenu} className="relative">
+              <summary className="flex items-center gap-2 cursor-pointer list-none [&.active]:font-bold">
+                User Management
+              </summary>
+              <div className="absolute right-0 top-full mt-2 min-w-44 bg-turquoise-600 rounded shadow-lg p-2 z-50">
+                <Link
+                  to="/admin/users"
+                  onClick={() => { userManagementMenu.current?.removeAttribute('open') }}
+                  className={`block px-3 py-2 rounded hover:bg-turquoise-700 ${isUsersRoute ? 'font-bold' : ''}`}
+                >
+                  Users
+                </Link>
+                <Link
+                  to="/admin/users/groups"
+                  onClick={() => { userManagementMenu.current?.removeAttribute('open') }}
+                  className="block px-3 py-2 rounded hover:bg-turquoise-700 [&.active]:font-bold"
+                >
+                  Groups
+                </Link>
+              </div>
+            </details>
             <Link to="/admin/badges" className="[&.active]:font-bold">
               Badges
             </Link>

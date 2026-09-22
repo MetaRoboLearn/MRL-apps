@@ -5,15 +5,24 @@ import {UserForm} from "../../../components/User/UserForm.tsx";
 import {createUser} from "../../../api/usersApi.ts";
 import {CreateUserRequest} from "../../../types/userTypes.ts";
 import {getRoles} from "../../../api/usersApi.ts";
+import {getGroups} from "../../../api/groupsApi.ts";
 
 const rolesQueryOptions = queryOptions({
   queryKey: ['roles'],
   queryFn: getRoles,
 })
 
+const groupsQueryOptions = queryOptions({
+  queryKey: ['groups'],
+  queryFn: getGroups,
+})
+
 export const Route = createFileRoute('/admin/users/new')({
   loader: ({ context }) => {
-    return context.queryClient.ensureQueryData(rolesQueryOptions)
+    return Promise.all([
+      context.queryClient.ensureQueryData(rolesQueryOptions),
+      context.queryClient.ensureQueryData(groupsQueryOptions),
+    ])
   },
   component: RouteComponent,
 })
@@ -21,6 +30,7 @@ export const Route = createFileRoute('/admin/users/new')({
 function RouteComponent() {
   const navigate = useNavigate()
   const { data: roles } = useSuspenseQuery(rolesQueryOptions)
+  const { data: groups } = useSuspenseQuery(groupsQueryOptions)
   const [error, setError] = useState<string>()
 
   const mutation = useMutation({
@@ -42,6 +52,7 @@ function RouteComponent() {
       first_name: data.first_name,
       last_name: data.last_name,
       role_id: data.role_id,
+      initial_group_id: data.initial_group_id,
     })
   }
 
@@ -50,6 +61,7 @@ function RouteComponent() {
       <h1 className="text-2xl font-bold mb-6">Add New User</h1>
       <UserForm
         roles={roles}
+        groups={groups}
         onSubmit={handleSubmit}
         isLoading={mutation.isPending}
         error={error}

@@ -2,6 +2,7 @@ import {useState, useEffect, FormEvent, ChangeEvent} from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {CreateUserRequest, Role, UpdateUserRequest, User} from "../../types/userTypes.ts";
 import {capitalizeFirstLetter} from "../../utils.ts";
+import {GroupSummary} from "../../types/groupTypes.ts";
 
 type UserFormData = {
   username: string
@@ -9,11 +10,13 @@ type UserFormData = {
   first_name: string
   last_name: string
   role_id: number
+  initial_group_id: number | ''
 }
 
 type UserFormPropsCreate = {
   user?: never
   roles: Role[]
+  groups: GroupSummary[]
   onSubmit: (data: CreateUserRequest) => Promise<void>
   isLoading: boolean
   error?: string
@@ -22,6 +25,7 @@ type UserFormPropsCreate = {
 type UserFormPropsEdit = {
   user: User
   roles: Role[]
+  groups?: GroupSummary[]
   onSubmit: (data: UpdateUserRequest) => Promise<void>
   isLoading: boolean
   error?: string
@@ -29,7 +33,7 @@ type UserFormPropsEdit = {
 
 type UserFormProps = UserFormPropsCreate | UserFormPropsEdit
 
-export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormProps) {
+export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error }: UserFormProps) {
   const navigate = useNavigate()
   const isEditing = !!user
 
@@ -39,6 +43,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     role_id: user?.role_id || roles[roles.length - 1]?.id || 1,
+    initial_group_id: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -51,9 +56,13 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         first_name: user.first_name,
         last_name: user.last_name,
         role_id: user.role_id,
+        initial_group_id: '',
       })
     }
   }, [user])
+
+  const selectedRole = roles.find((role) => role.id === Number(formData.role_id))
+  const isStudentRole = selectedRole?.name.toLowerCase() === 'student'
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -74,6 +83,10 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
     }
     if (!formData.last_name.trim()) {
       newErrors.last_name = 'Last name is required'
+    }
+
+    if (!isEditing && isStudentRole && formData.initial_group_id === '') {
+      newErrors.initial_group_id = 'Initial group is required for students'
     }
 
     setErrors(newErrors)
@@ -111,6 +124,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         first_name: formData.first_name,
         last_name: formData.last_name,
         role_id: formData.role_id,
+        ...(isStudentRole ? { initial_group_id: formData.initial_group_id as number } : {}),
       }
 
       await (onSubmit as (data: CreateUserRequest) => Promise<void>)(submitData)
@@ -121,7 +135,17 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'role_id'
+        ? Number(value)
+        : name === 'initial_group_id'
+          ? (value ? Number(value) : '')
+          : value,
+      ...(name === 'role_id' && roles.find((role) => role.id === Number(value))?.name.toLowerCase() !== 'student'
+        ? { initial_group_id: '' }
+        : {}),
+    }))
     // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors((prev) => {
@@ -242,6 +266,33 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
             ))}
           </select>
         </div>
+
+        {!isEditing && isStudentRole && (
+          <div>
+            <label htmlFor="initial_group_id" className="block text-sm font-medium mb-1">
+              Initial group *
+            </label>
+            <select
+              id="initial_group_id"
+              name="initial_group_id"
+              value={formData.initial_group_id}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border rounded-md ${
+                errors.initial_group_id ? 'border-red-500' : 'border-gray-300'
+              }`}
+            >
+              <option value="">Select an initial group...</option>
+              {groups.map((group) => (
+                <option key={group.group_id} value={group.group_id}>
+                  {group.group_name}
+                </option>
+              ))}
+            </select>
+            {errors.initial_group_id && (
+              <p className="mt-1 text-sm text-red-600">{errors.initial_group_id}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Buttons */}

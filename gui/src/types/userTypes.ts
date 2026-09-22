@@ -38,6 +38,7 @@ export type CreateUserRequest = {
   first_name: string
   last_name: string
   role_id: number
+  initial_group_id?: number
 }
 
 export type UpdateUserRequest = {
@@ -46,4 +47,12 @@ export type UpdateUserRequest = {
   first_name: string
   last_name: string
   role_id: number
+}
+
+
+export type SelectableStudent = {
+  id: number
+  first_name: string
+  last_name: string
+  username: string
 }

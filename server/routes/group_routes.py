@@ -73,6 +73,8 @@ def get_group(group_id: int):
                 {
                     "user_id": membership.user.id,
                     "username": membership.user.username,
+                    "first_name": membership.user.first_name,
+                    "last_name": membership.user.last_name,
                     "full_name": f"{membership.user.first_name} {membership.user.last_name}",
                     "role": membership.user.role.name if membership.user.role else None,
                 }
@@ -119,7 +121,7 @@ def delete_group(group_id: int):
         if orphaned_students:
             return jsonify({
                 "error": "Cannot delete group because it would leave students without a group",
-                "user_ids": orphaned_students,
+                "usernames": orphaned_students,
             }), 409
 
         return jsonify({"success": True}), 200
