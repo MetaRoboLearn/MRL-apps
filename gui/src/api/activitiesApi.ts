@@ -1,4 +1,4 @@
-import {Activity, AvailableActivity, CreateActivityRequest} from "../types/activityTypes.ts";
+import {Activity, AvailableActivity, CreateActivityRequest, OwnedActivityOption} from "../types/activityTypes.ts";
 import {BadgeTaskOption} from "../types/badgeTypes.ts";
 
 export const getActivityById = async (activityId: string) => {
@@ -35,12 +35,19 @@ export const getActivitiesOverview = async (params: {
   return response.json();
 };
 
-export const getBadgeTaskOptions = async (): Promise<BadgeTaskOption[]> => {
-  const activities = await getActivitiesOverview({
-    limit: 1000,
-    active_only: true,
-    order_by_time_from: true,
+export const getOwnedActivitiesOverview = async (): Promise<OwnedActivityOption[]> => {
+  const response = await fetch('/api/activities/owned-overview', {
+    credentials: 'include',
   })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to fetch owned activities')
+  }
+  return response.json()
+}
+
+export const getBadgeTaskOptions = async (): Promise<BadgeTaskOption[]> => {
+  const activities = await getOwnedActivitiesOverview()
 
   return activities.flatMap((activity) => activity.activity_tasks.map((task) => ({
     activity_id: activity.id,

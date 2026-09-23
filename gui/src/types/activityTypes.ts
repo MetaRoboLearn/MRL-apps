@@ -42,6 +42,30 @@ export type Activity = {
   creator: UserBasic;
 }
 
+export type OwnedActivityTaskOption = {
+  activity_task_id: number
+  task_id: number
+  task_title: string | null
+  preview: string | null
+  difficulty: number | null
+  order: number | null
+  task_type: string | null
+}
+
+export type OwnedActivityOption = {
+  id: number
+  title: string
+  description: string | null
+  time_from: string | null
+  time_to: string | null
+  active: boolean | null
+  created_at: string
+  updated_at: string | null
+  created_by: number | null
+  updated_by: number | null
+  activity_tasks: OwnedActivityTaskOption[]
+}
+
 export type CreateActivityRequest = {
   title: string;
   description?: string;

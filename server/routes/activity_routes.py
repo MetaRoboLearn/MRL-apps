@@ -134,6 +134,37 @@ def list_activities_with_tasks():
             for a in activities
         ]), 200
 
+
+# ---------- TEACHER-OWNED OPTIONS ----------
+@bp.route("/owned-overview", methods=["GET"])
+@role_required('admin', 'teacher')
+def list_owned_activities_with_tasks():
+    """Return role-scoped activity options used by analytics and badge forms."""
+    with db_session() as session:
+        activities = ActivityRepository(session).list_owned_activities_with_tasks(
+            user_id=current_user.id,
+            is_admin=current_user.role.name == 'admin',
+            active_only=True,
+        )
+        return jsonify([
+            {
+                **_activity_to_dict(activity),
+                "activity_tasks": [
+                    {
+                        "activity_task_id": task.id,
+                        "task_id": task.task_id,
+                        "task_title": task.task.title if task.task else None,
+                        "preview": task.preview,
+                        "difficulty": task.difficulty,
+                        "order": task.order,
+                        "task_type": task.type.name if task.type else None,
+                    }
+                    for task in sorted(activity.activity_tasks, key=lambda item: item.order or 0)
+                ],
+            }
+            for activity in activities
+        ]), 200
+
 # ---------- READ ALL ACTIVITIES AVAILABLE TO STUDENTS ----------
 @bp.route("/available", methods=["GET"])
 def list_student_available_activities():

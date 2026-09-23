@@ -1,10 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { queryOptions, useQuery, useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { BadgeForm } from '../../../../components/Badge/BadgeForm'
 import {deleteBadge, getBadgeById, updateBadge} from "../../../../api/badgeApi.ts";
-import { getBadgeTaskOptions } from '../../../../api/activitiesApi.ts'
-import { useAuth } from '../../../../hooks/useAuth.ts'
 
 const badgeQueryOptions = (badgeId: string) =>
   queryOptions({
@@ -23,16 +21,7 @@ function RouteComponent() {
   const navigate = useNavigate()
   const { badgeId } = Route.useParams()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
   const { data: badge } = useSuspenseQuery(badgeQueryOptions(badgeId))
-  const taskOptionsQuery = useQuery(queryOptions({
-    queryKey: ['badge-task-options'],
-    queryFn: getBadgeTaskOptions,
-    enabled: !!user,
-  }))
-  const taskOptions = (taskOptionsQuery.data || []).filter((task) =>
-    user?.role === 'admin' || task.activity_created_by === user?.id,
-  )
   const [error, setError] = useState<string>()
 
   const mutation = useMutation({
@@ -86,8 +75,7 @@ function RouteComponent() {
         onSubmit={handleSubmit}
         isLoading={mutation.isPending}
         error={error}
-        taskOptions={taskOptions}
-        taskOptionsLoading={taskOptionsQuery.isLoading}
+        taskOptions={[]}
       />
     </div>
   )

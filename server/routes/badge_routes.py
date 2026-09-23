@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
-from access_policies import owns_badge, owns_activity_task
+from access_policies import owns_badge
 from auth import role_required
 from database import db_session
 from file_utils import save_badge_image, delete_badge_image
@@ -83,8 +83,11 @@ def create_badge():
         activity_task = ActivityTaskRepository(session).get_by_id(activity_task_id)
         if not activity_task:
             return jsonify({"error": "Activity task not found"}), 404
-        if not owns_activity_task(current_user, activity_task):
-            return jsonify({"error": "You can only create badges for your own activity tasks"}), 403
+        if not activity_task.activity or (
+            current_user.role.name != 'admin'
+            and activity_task.activity.created_by != current_user.id
+        ):
+            return jsonify({"error": "You can only create badges for activity tasks in your own activities"}), 403
 
 
         repo = BadgeRepository(session)

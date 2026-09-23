@@ -103,6 +103,11 @@ export function BadgeForm({
           <option value="">
             {taskOptionsLoading ? 'Loading tasks...' : 'Select a task'}
           </option>
+          {badge && !taskOptions.some((task) => task.activity_task_id === badge.relevant_activity_task_id) && (
+            <option value={badge.relevant_activity_task_id}>
+              Linked activity task #{badge.relevant_activity_task_id}
+            </option>
+          )}
           {taskOptions.map((task) => (
             <option key={task.activity_task_id} value={task.activity_task_id}>
               {task.activity_title} - {task.task_title || `Task #${task.activity_task_id}`}

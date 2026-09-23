@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy.orm import Session, joinedload, aliased
 from sqlalchemy import or_, exists
 
-from access_policies import owns_activity, owns_activity_task
+from access_policies import owns_activity
 from models import ActivityTask, User
 from models.activity import Activity
 from repositories.base_repository import BaseRepository
@@ -41,7 +41,6 @@ class ActivityRepository(BaseRepository[Activity]):
             activity.id
             for activity in fetched
             if not owns_activity(user, activity)
-            and not any(owns_activity_task(user, task) for task in activity.activity_tasks)
         }
         inaccessible |= requested - {activity.id for activity in fetched}
         return sorted(inaccessible)
@@ -93,6 +92,22 @@ class ActivityRepository(BaseRepository[Activity]):
             q = q.order_by(Activity.time_from.asc().nullslast(), Activity.id.asc())
 
         return q.offset(skip).limit(limit).all()
+
+    def list_owned_activities_with_tasks(self, *, user_id: int, is_admin: bool, active_only: bool = True):
+        """Return activities allowed in teacher-owned analytics/form selectors."""
+        q = (
+            self.session.query(Activity)
+            .options(
+                joinedload(Activity.activity_tasks).joinedload(ActivityTask.task),
+                joinedload(Activity.activity_tasks).joinedload(ActivityTask.type),
+                joinedload(Activity.creator),
+            )
+        )
+        if active_only:
+            q = q.filter(Activity.active.is_(True))
+        if not is_admin:
+            q = q.filter(Activity.created_by == user_id)
+        return q.order_by(Activity.time_from.asc().nullslast(), Activity.id.asc()).all()
 
     # ---------- READ ALL ACTIVITIES AVAILABLE TO STUDENTS ----------
     def list_student_available_activities(self):

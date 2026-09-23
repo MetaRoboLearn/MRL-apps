@@ -3,12 +3,11 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { z } from 'zod'
 import { getGroupAnalytics } from '../../../api/analyticsApi.ts'
-import { getActivitiesOverview } from '../../../api/activitiesApi.ts'
+import { getOwnedActivitiesOverview } from '../../../api/activitiesApi.ts'
 import { getGroups } from '../../../api/groupsApi.ts'
 import { getUsersByIds } from '../../../api/usersApi.ts'
 import { AnalyticsImageViewer } from '../../../components/Analytics/AnalyticsImageViewer.tsx'
 import { MultiSelectOption, SearchableMultiSelect } from '../../../components/Analytics/SearchableMultiSelect.tsx'
-import { useAuth } from '../../../hooks/useAuth.ts'
 import { GroupAnalyticsResponse } from '../../../types/analyticsTypes.ts'
 
 const analyticsSearchSchema = z.object({
@@ -22,7 +21,6 @@ export const Route = createFileRoute('/admin/analytics/')({
 })
 
 function RouteComponent() {
-  const { user } = useAuth()
   const search = Route.useSearch()
   const [groupIds, setGroupIds] = useState(search.group_ids)
   const [activityIds, setActivityIds] = useState(search.activity_ids)
@@ -32,7 +30,7 @@ function RouteComponent() {
   const groupsQuery = useQuery({ queryKey: ['analytics-groups'], queryFn: getGroups })
   const activitiesQuery = useQuery({
     queryKey: ['analytics-activities'],
-    queryFn: () => getActivitiesOverview({ limit: 1000, active_only: true, order_by_time_from: true }),
+    queryFn: getOwnedActivitiesOverview,
   })
   const studentsQuery = useQuery({
     queryKey: ['analytics-students', result?.student_ids],
@@ -55,10 +53,8 @@ function RouteComponent() {
     [groupsQuery.data],
   )
   const activityOptions: MultiSelectOption[] = useMemo(
-    () => (activitiesQuery.data || [])
-      .filter((activity) => user?.role === 'admin' || activity.created_by === user?.id)
-      .map((activity) => ({ id: activity.id, label: activity.title })),
-    [activitiesQuery.data, user?.id, user?.role],
+    () => (activitiesQuery.data || []).map((activity) => ({ id: activity.id, label: activity.title })),
+    [activitiesQuery.data],
   )
 
   const canCreate = groupIds.length > 0 && activityIds.length > 0 && !analyticsMutation.isPending

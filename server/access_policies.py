@@ -14,7 +14,7 @@ def owns_badge(user, badge) -> bool:
 def owns_activity(user, activity) -> bool:
     return user.role.name == "admin" or activity.created_by == user.id
 
-
+# TODO: this activity policy is not needed at the moment, remove it if it remains unused
 def owns_activity_task(user, activity_task) -> bool:
     return user.role.name == "admin" or activity_task.created_by == user.id
 
