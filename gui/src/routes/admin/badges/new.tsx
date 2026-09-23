@@ -1,9 +1,11 @@
 // routes/admin/badges/new.tsx
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { BadgeForm } from '../../../components/Badge/BadgeForm'
-import {createBadge} from "../../../api/badgeApi.ts";
+import { createBadge } from '../../../api/badgeApi.ts'
+import { getBadgeTaskOptions } from '../../../api/activitiesApi.ts'
+import { useAuth } from '../../../hooks/useAuth.ts'
 
 export const Route = createFileRoute('/admin/badges/new')({
   component: RouteComponent,
@@ -11,7 +13,16 @@ export const Route = createFileRoute('/admin/badges/new')({
 
 function RouteComponent() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [error, setError] = useState<string>()
+  const taskOptionsQuery = useQuery(queryOptions({
+    queryKey: ['badge-task-options'],
+    queryFn: getBadgeTaskOptions,
+    enabled: !!user,
+  }))
+  const taskOptions = (taskOptionsQuery.data || []).filter((task) =>
+    user?.role === 'admin' || task.activity_created_by === user?.id,
+  )
 
   const mutation = useMutation({
     mutationFn: createBadge,
@@ -35,6 +46,8 @@ function RouteComponent() {
         onSubmit={handleSubmit}
         isLoading={mutation.isPending}
         error={error}
+        taskOptions={taskOptions}
+        taskOptionsLoading={taskOptionsQuery.isLoading}
       />
     </div>
   )

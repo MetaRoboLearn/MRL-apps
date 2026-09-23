@@ -1,4 +1,5 @@
-import {UserBadgeEntry} from "../types/userBadgeTypes.ts";
+import { BadgeAssignment } from '../types/analyticsTypes.ts'
+import { BadgeCatalogEntry, UserBadgeEntry } from "../types/userBadgeTypes.ts";
 
 export const getUserBadges = async (userId: string): Promise<UserBadgeEntry[]> => {
   const response = await fetch(`/api/users/${userId}/badges`, {
@@ -12,7 +13,7 @@ export const assignBadge = async (data: {
   user_id: number
   badge_id: number
   comment?: string
-}) => {
+}): Promise<BadgeAssignment> => {
   const response = await fetch('/api/user-badges/', {
     credentials: 'include',
     method: 'POST',
@@ -38,8 +39,24 @@ export const removeBadge = async (userBadgeId: number) => {
   return response.json()
 }
 
-export const getMyBadges = async (): Promise<UserBadgeEntry[]> => {
-  const response = await fetch('/api/user-badges/my', {
+export const updateBadgeComment = async (userBadgeId: number, comment: string): Promise<BadgeAssignment> => {
+  const response = await fetch(`/api/user-badges/${userBadgeId}`, {
+    credentials: 'include',
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment }),
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to update badge comment')
+  }
+  return response.json()
+}
+
+export const getMyBadges = async (
+  filter: 'all' | 'assigned' | 'unassigned' = 'all',
+): Promise<BadgeCatalogEntry[]> => {
+  const response = await fetch(`/api/user-badges/my?filter=${filter}`, {
     credentials: 'include',
   })
   if (!response.ok) throw new Error('Failed to fetch badges')

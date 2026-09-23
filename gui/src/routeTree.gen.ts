@@ -20,6 +20,7 @@ import { Route as SolveActivityTaskIdIndexRouteImport } from './routes/solve/$ac
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
 import { Route as AdminTasksIndexRouteImport } from './routes/admin/tasks/index'
 import { Route as AdminBadgesIndexRouteImport } from './routes/admin/badges/index'
+import { Route as AdminAnalyticsIndexRouteImport } from './routes/admin/analytics/index'
 import { Route as AdminActivitiesIndexRouteImport } from './routes/admin/activities/index'
 import { Route as AdminUsersNewRouteImport } from './routes/admin/users/new'
 import { Route as AdminTasksNewRouteImport } from './routes/admin/tasks/new'
@@ -36,6 +37,7 @@ import { Route as AdminTasksTaskIdEditRouteImport } from './routes/admin/tasks/$
 import { Route as AdminBadgesBadgeIdEditRouteImport } from './routes/admin/badges/$badgeId/edit'
 import { Route as AdminActivitiesActivityIdEditRouteImport } from './routes/admin/activities/$activityId/edit'
 import { Route as AdminUsersGroupsGroupIdIndexRouteImport } from './routes/admin/users/groups/$groupId/index'
+import { Route as AdminAnalyticsStudentStudentIdIndexRouteImport } from './routes/admin/analytics/student/$studentId/index'
 import { Route as AdminUsersGroupsGroupIdMembersRouteImport } from './routes/admin/users/groups/$groupId/members'
 import { Route as AdminActivitiesActivityIdTasksAddRouteImport } from './routes/admin/activities/$activityId/tasks/add'
 import { Route as AdminActivitiesActivityIdTasksActivityTaskIdStudentsRouteImport } from './routes/admin/activities/$activityId/tasks/$activityTaskId/students'
@@ -95,6 +97,11 @@ const AdminTasksIndexRoute = AdminTasksIndexRouteImport.update({
 const AdminBadgesIndexRoute = AdminBadgesIndexRouteImport.update({
   id: '/badges/',
   path: '/badges/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAnalyticsIndexRoute = AdminAnalyticsIndexRouteImport.update({
+  id: '/analytics/',
+  path: '/analytics/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminActivitiesIndexRoute = AdminActivitiesIndexRouteImport.update({
@@ -180,6 +187,12 @@ const AdminUsersGroupsGroupIdIndexRoute =
     path: '/users/groups/$groupId/',
     getParentRoute: () => AdminRouteRoute,
   } as any)
+const AdminAnalyticsStudentStudentIdIndexRoute =
+  AdminAnalyticsStudentStudentIdIndexRouteImport.update({
+    id: '/analytics/student/$studentId/',
+    path: '/analytics/student/$studentId/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
 const AdminUsersGroupsGroupIdMembersRoute =
   AdminUsersGroupsGroupIdMembersRouteImport.update({
     id: '/users/groups/$groupId/members',
@@ -219,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/admin/tasks/new': typeof AdminTasksNewRoute
   '/admin/users/new': typeof AdminUsersNewRoute
   '/admin/activities/': typeof AdminActivitiesIndexRoute
+  '/admin/analytics/': typeof AdminAnalyticsIndexRoute
   '/admin/badges/': typeof AdminBadgesIndexRoute
   '/admin/tasks/': typeof AdminTasksIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
@@ -234,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/admin/users/groups/': typeof AdminUsersGroupsIndexRoute
   '/admin/activities/$activityId/tasks/add': typeof AdminActivitiesActivityIdTasksAddRoute
   '/admin/users/groups/$groupId/members': typeof AdminUsersGroupsGroupIdMembersRoute
+  '/admin/analytics/student/$studentId/': typeof AdminAnalyticsStudentStudentIdIndexRoute
   '/admin/users/groups/$groupId/': typeof AdminUsersGroupsGroupIdIndexRoute
   '/admin/activities/$activityId/tasks/$activityTaskId/edit': typeof AdminActivitiesActivityIdTasksActivityTaskIdEditRoute
   '/admin/activities/$activityId/tasks/$activityTaskId/students': typeof AdminActivitiesActivityIdTasksActivityTaskIdStudentsRoute
@@ -251,6 +266,7 @@ export interface FileRoutesByTo {
   '/admin/tasks/new': typeof AdminTasksNewRoute
   '/admin/users/new': typeof AdminUsersNewRoute
   '/admin/activities': typeof AdminActivitiesIndexRoute
+  '/admin/analytics': typeof AdminAnalyticsIndexRoute
   '/admin/badges': typeof AdminBadgesIndexRoute
   '/admin/tasks': typeof AdminTasksIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
@@ -266,6 +282,7 @@ export interface FileRoutesByTo {
   '/admin/users/groups': typeof AdminUsersGroupsIndexRoute
   '/admin/activities/$activityId/tasks/add': typeof AdminActivitiesActivityIdTasksAddRoute
   '/admin/users/groups/$groupId/members': typeof AdminUsersGroupsGroupIdMembersRoute
+  '/admin/analytics/student/$studentId': typeof AdminAnalyticsStudentStudentIdIndexRoute
   '/admin/users/groups/$groupId': typeof AdminUsersGroupsGroupIdIndexRoute
   '/admin/activities/$activityId/tasks/$activityTaskId/edit': typeof AdminActivitiesActivityIdTasksActivityTaskIdEditRoute
   '/admin/activities/$activityId/tasks/$activityTaskId/students': typeof AdminActivitiesActivityIdTasksActivityTaskIdStudentsRoute
@@ -285,6 +302,7 @@ export interface FileRoutesById {
   '/admin/tasks/new': typeof AdminTasksNewRoute
   '/admin/users/new': typeof AdminUsersNewRoute
   '/admin/activities/': typeof AdminActivitiesIndexRoute
+  '/admin/analytics/': typeof AdminAnalyticsIndexRoute
   '/admin/badges/': typeof AdminBadgesIndexRoute
   '/admin/tasks/': typeof AdminTasksIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
@@ -300,6 +318,7 @@ export interface FileRoutesById {
   '/admin/users/groups/': typeof AdminUsersGroupsIndexRoute
   '/admin/activities/$activityId/tasks/add': typeof AdminActivitiesActivityIdTasksAddRoute
   '/admin/users/groups/$groupId/members': typeof AdminUsersGroupsGroupIdMembersRoute
+  '/admin/analytics/student/$studentId/': typeof AdminAnalyticsStudentStudentIdIndexRoute
   '/admin/users/groups/$groupId/': typeof AdminUsersGroupsGroupIdIndexRoute
   '/admin/activities/$activityId/tasks/$activityTaskId/edit': typeof AdminActivitiesActivityIdTasksActivityTaskIdEditRoute
   '/admin/activities/$activityId/tasks/$activityTaskId/students': typeof AdminActivitiesActivityIdTasksActivityTaskIdStudentsRoute
@@ -320,6 +339,7 @@ export interface FileRouteTypes {
     | '/admin/tasks/new'
     | '/admin/users/new'
     | '/admin/activities/'
+    | '/admin/analytics/'
     | '/admin/badges/'
     | '/admin/tasks/'
     | '/admin/users/'
@@ -335,6 +355,7 @@ export interface FileRouteTypes {
     | '/admin/users/groups/'
     | '/admin/activities/$activityId/tasks/add'
     | '/admin/users/groups/$groupId/members'
+    | '/admin/analytics/student/$studentId/'
     | '/admin/users/groups/$groupId/'
     | '/admin/activities/$activityId/tasks/$activityTaskId/edit'
     | '/admin/activities/$activityId/tasks/$activityTaskId/students'
@@ -352,6 +373,7 @@ export interface FileRouteTypes {
     | '/admin/tasks/new'
     | '/admin/users/new'
     | '/admin/activities'
+    | '/admin/analytics'
     | '/admin/badges'
     | '/admin/tasks'
     | '/admin/users'
@@ -367,6 +389,7 @@ export interface FileRouteTypes {
     | '/admin/users/groups'
     | '/admin/activities/$activityId/tasks/add'
     | '/admin/users/groups/$groupId/members'
+    | '/admin/analytics/student/$studentId'
     | '/admin/users/groups/$groupId'
     | '/admin/activities/$activityId/tasks/$activityTaskId/edit'
     | '/admin/activities/$activityId/tasks/$activityTaskId/students'
@@ -385,6 +408,7 @@ export interface FileRouteTypes {
     | '/admin/tasks/new'
     | '/admin/users/new'
     | '/admin/activities/'
+    | '/admin/analytics/'
     | '/admin/badges/'
     | '/admin/tasks/'
     | '/admin/users/'
@@ -400,6 +424,7 @@ export interface FileRouteTypes {
     | '/admin/users/groups/'
     | '/admin/activities/$activityId/tasks/add'
     | '/admin/users/groups/$groupId/members'
+    | '/admin/analytics/student/$studentId/'
     | '/admin/users/groups/$groupId/'
     | '/admin/activities/$activityId/tasks/$activityTaskId/edit'
     | '/admin/activities/$activityId/tasks/$activityTaskId/students'
@@ -492,6 +517,13 @@ declare module '@tanstack/react-router' {
       path: '/badges'
       fullPath: '/admin/badges/'
       preLoaderRoute: typeof AdminBadgesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/analytics/': {
+      id: '/admin/analytics/'
+      path: '/analytics'
+      fullPath: '/admin/analytics/'
+      preLoaderRoute: typeof AdminAnalyticsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/activities/': {
@@ -606,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersGroupsGroupIdIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/analytics/student/$studentId/': {
+      id: '/admin/analytics/student/$studentId/'
+      path: '/analytics/student/$studentId'
+      fullPath: '/admin/analytics/student/$studentId/'
+      preLoaderRoute: typeof AdminAnalyticsStudentStudentIdIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/users/groups/$groupId/members': {
       id: '/admin/users/groups/$groupId/members'
       path: '/users/groups/$groupId/members'
@@ -660,6 +699,7 @@ interface AdminRouteRouteChildren {
   AdminTasksNewRoute: typeof AdminTasksNewRoute
   AdminUsersNewRoute: typeof AdminUsersNewRoute
   AdminActivitiesIndexRoute: typeof AdminActivitiesIndexRoute
+  AdminAnalyticsIndexRoute: typeof AdminAnalyticsIndexRoute
   AdminBadgesIndexRoute: typeof AdminBadgesIndexRoute
   AdminTasksIndexRoute: typeof AdminTasksIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
@@ -672,6 +712,7 @@ interface AdminRouteRouteChildren {
   AdminUsersGroupsIndexRoute: typeof AdminUsersGroupsIndexRoute
   AdminActivitiesActivityIdTasksAddRoute: typeof AdminActivitiesActivityIdTasksAddRoute
   AdminUsersGroupsGroupIdMembersRoute: typeof AdminUsersGroupsGroupIdMembersRoute
+  AdminAnalyticsStudentStudentIdIndexRoute: typeof AdminAnalyticsStudentStudentIdIndexRoute
   AdminUsersGroupsGroupIdIndexRoute: typeof AdminUsersGroupsGroupIdIndexRoute
   AdminActivitiesActivityIdTasksActivityTaskIdEditRoute: typeof AdminActivitiesActivityIdTasksActivityTaskIdEditRoute
   AdminActivitiesActivityIdTasksActivityTaskIdStudentsRoute: typeof AdminActivitiesActivityIdTasksActivityTaskIdStudentsRoute
@@ -685,6 +726,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminTasksNewRoute: AdminTasksNewRoute,
   AdminUsersNewRoute: AdminUsersNewRoute,
   AdminActivitiesIndexRoute: AdminActivitiesIndexRoute,
+  AdminAnalyticsIndexRoute: AdminAnalyticsIndexRoute,
   AdminBadgesIndexRoute: AdminBadgesIndexRoute,
   AdminTasksIndexRoute: AdminTasksIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
@@ -698,6 +740,8 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminActivitiesActivityIdTasksAddRoute:
     AdminActivitiesActivityIdTasksAddRoute,
   AdminUsersGroupsGroupIdMembersRoute: AdminUsersGroupsGroupIdMembersRoute,
+  AdminAnalyticsStudentStudentIdIndexRoute:
+    AdminAnalyticsStudentStudentIdIndexRoute,
   AdminUsersGroupsGroupIdIndexRoute: AdminUsersGroupsGroupIdIndexRoute,
   AdminActivitiesActivityIdTasksActivityTaskIdEditRoute:
     AdminActivitiesActivityIdTasksActivityTaskIdEditRoute,

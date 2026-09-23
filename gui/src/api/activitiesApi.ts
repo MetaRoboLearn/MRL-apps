@@ -1,4 +1,5 @@
-import {AvailableActivity, CreateActivityRequest} from "../types/activityTypes.ts";
+import {Activity, AvailableActivity, CreateActivityRequest} from "../types/activityTypes.ts";
+import {BadgeTaskOption} from "../types/badgeTypes.ts";
 
 export const getActivityById = async (activityId: string) => {
   const response = await fetch(`/api/activities/${activityId}`, {
@@ -19,7 +20,7 @@ export const getActivitiesOverview = async (params: {
   active_only?: boolean;
   search?: string;
   order_by_time_from?: boolean;
-}) => {
+}): Promise<Activity[]> => {
   const queryParams = new URLSearchParams();
 
   if (params.skip) queryParams.set('skip', params.skip.toString());
@@ -33,6 +34,22 @@ export const getActivitiesOverview = async (params: {
   });
   return response.json();
 };
+
+export const getBadgeTaskOptions = async (): Promise<BadgeTaskOption[]> => {
+  const activities = await getActivitiesOverview({
+    limit: 1000,
+    active_only: true,
+    order_by_time_from: true,
+  })
+
+  return activities.flatMap((activity) => activity.activity_tasks.map((task) => ({
+    activity_id: activity.id,
+    activity_title: activity.title,
+    activity_created_by: activity.created_by,
+    activity_task_id: task.activity_task_id,
+    task_title: task.task_title,
+  })))
+}
 
 export const createActivity = async (data: CreateActivityRequest) => {
   const response = await fetch('/api/activities/', {

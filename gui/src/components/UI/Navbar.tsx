@@ -71,6 +71,9 @@ const Navbar = () => {
             <Link to="/admin/activities" className="[&.active]:font-bold">
               Activities
             </Link>
+            <Link to="/admin/analytics" className="[&.active]:font-bold">
+              Analytics
+            </Link>
             <Link to="/admin/tasks" className="[&.active]:font-bold">
               Tasks
             </Link>

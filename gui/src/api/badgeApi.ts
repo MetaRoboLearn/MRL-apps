@@ -28,7 +28,7 @@ export const getBadgeById = async (badgeId: string): Promise<Badge> => {
 }
 
 export const createBadge = async (data: FormData): Promise<Badge> => {
-  const response = await fetch('/api/badges', {
+  const response = await fetch('/api/badges/', {
     credentials: 'include',
     method: 'POST',
     body: data,

@@ -3,7 +3,6 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getUserById, deleteUser } from "../../../../api/usersApi.ts"
 import { formatLocalDateTime } from "../../../../utils.ts"
-import { UserBadgesSection } from '../../../../components/User/UserBadgesSection'
 
 const userQueryOptions = (userId: string) =>
   queryOptions({
@@ -145,10 +144,6 @@ function RouteComponent() {
           </div>
         </div>
 
-        {/* Right: Badges */}
-        <div className="lg:w-1/2">
-          <UserBadgesSection userId={userId} />
-        </div>
       </div>
     </div>
   )

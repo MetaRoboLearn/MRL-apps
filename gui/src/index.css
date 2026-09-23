@@ -108,6 +108,22 @@
     @apply text-dark-neutrals-200;
 }
 
+.analytics-template-code {
+    opacity: 0.5;
+}
+
+.analytics-student-code {
+    font-weight: 700;
+}
+
+.analytics-code-highlight {
+    background-color: #ffeb9e;
+}
+
+.analytics-code-highlight-line {
+    background-color: #ffeb9e;
+}
+
 .header {
     @apply bg-white w-full h-14 px-4 items-end;
 }

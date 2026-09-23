@@ -1,20 +1,30 @@
 // components/Badge/BadgeForm.tsx
 import { useState, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Badge } from '../../types/badgeTypes'
+import { Badge, BadgeTaskOption } from '../../types/badgeTypes'
 
 interface BadgeFormProps {
   badge?: Badge
   onSubmit: (data: FormData) => Promise<void>
   isLoading: boolean
   error?: string
+  taskOptions: BadgeTaskOption[]
+  taskOptionsLoading?: boolean
 }
 
-export function BadgeForm({ badge, onSubmit, isLoading, error }: BadgeFormProps) {
+export function BadgeForm({
+  badge,
+  onSubmit,
+  isLoading,
+  error,
+  taskOptions,
+  taskOptionsLoading = false,
+}: BadgeFormProps) {
   const navigate = useNavigate()
   const [title, setTitle] = useState(badge?.title || '')
   const [description, setDescription] = useState(badge?.description || '')
   const [value, setValue] = useState(badge?.value?.toString() || '')
+  const [activityTaskId, setActivityTaskId] = useState(badge?.relevant_activity_task_id?.toString() || '')
   const [previewUrl, setPreviewUrl] = useState<string | null>(badge?.image_url || null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -31,6 +41,9 @@ export function BadgeForm({ badge, onSubmit, isLoading, error }: BadgeFormProps)
     formData.append('title', title)
     formData.append('description', description)
     formData.append('value', value)
+    if (activityTaskId) {
+      formData.append('activity_task_id', activityTaskId)
+    }
 
     const file = fileInputRef.current?.files?.[0]
     if (file) {
@@ -76,6 +89,29 @@ export function BadgeForm({ badge, onSubmit, isLoading, error }: BadgeFormProps)
           required
           className="w-full px-3 py-2 border border-gray-300 rounded-md"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Linked Task *</label>
+        <select
+          value={activityTaskId}
+          onChange={(e) => setActivityTaskId(e.target.value)}
+          required={!badge}
+          disabled={Boolean(badge) || taskOptionsLoading || isLoading}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100 disabled:text-gray-500"
+        >
+          <option value="">
+            {taskOptionsLoading ? 'Loading tasks...' : 'Select a task'}
+          </option>
+          {taskOptions.map((task) => (
+            <option key={task.activity_task_id} value={task.activity_task_id}>
+              {task.activity_title} - {task.task_title || `Task #${task.activity_task_id}`}
+            </option>
+          ))}
+        </select>
+        {!taskOptionsLoading && taskOptions.length === 0 && (
+          <p className="mt-1 text-sm text-gray-500">No eligible activity tasks found.</p>
+        )}
       </div>
 
       <div>
