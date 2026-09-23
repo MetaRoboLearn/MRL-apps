@@ -20,7 +20,7 @@ EVENT_COLUMNS = (
     "user_id", "user_started_task_id", "activity_id", "activity_task_id", "task_id",
     "username", "first_name", "last_name", "action_time", "action_type", "value",
     "session_start", "final_code_db", "db_is_finished", "task_title", "task_description",
-    "task_code_template", "task_preview", "task_difficulty", "app_mode",
+    "activity_title", "task_code_template", "task_preview", "task_difficulty", "app_mode",
 )
 
 RUN_EVENTS = frozenset(("sim_run", "robot_run"))
@@ -96,6 +96,7 @@ def _row_from_log(log) -> dict:
         "activity_id": activity_task.activity_id,
         "activity_task_id": activity_task.id,
         "task_id": activity_task.task_id,
+        "activity_title": activity_task.activity.title if activity_task.activity else None,
         "username": user.username,
         "first_name": user.first_name,
         "last_name": user.last_name,
@@ -224,6 +225,7 @@ def build_session_summaries(processed: pd.DataFrame) -> pd.DataFrame:
             "user_id": last["user_id"],
             "user_started_task_id": session_id,
             "activity_id": last["activity_id"],
+            "activity_title": last["activity_title"],
             "activity_task_id": last["activity_task_id"],
             "task_id": last["task_id"],
             "task_title": last["task_title"],

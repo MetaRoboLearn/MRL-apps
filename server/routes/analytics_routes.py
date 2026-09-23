@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 from flask_login import current_user, login_required
 
 from analytics.analytics_orchestrator import generate_group_analytics, generate_llm_feedback, generate_student_portfolio
@@ -106,4 +106,4 @@ def post_llm_feedback():
     result = generate_llm_feedback(code, data.get("analysis"))
     if "error" in result:
         return jsonify(result), 502
-    return jsonify(result), 200
+    return Response(result["suggestion"], status=200, mimetype="text/plain")

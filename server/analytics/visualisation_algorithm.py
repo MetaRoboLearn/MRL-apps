@@ -211,6 +211,7 @@ def build_student_portfolio_data(
     summaries: pd.DataFrame,
     student_id: int,
     badge_state: dict[int, dict[str, Any]] | None = None,
+    badge_definitions: dict[int, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build one student portfolio containing per-task cards."""
     if summaries.empty:
@@ -220,6 +221,7 @@ def build_student_portfolio_data(
     student_processed = processed[processed["user_id"] == student_id]
     cards = []
     badge_state = badge_state or {}
+    badge_definitions = badge_definitions or {}
 
     for _, summary in student_summaries.sort_values("first_attempt_at").iterrows():
         task_id = int(summary["activity_task_id"])
@@ -233,6 +235,7 @@ def build_student_portfolio_data(
         cards.append({
             "activity_task_id": task_id,
             "task_id": _json_value(summary["task_id"]),
+            "activity_title": _json_value(summary["activity_title"]),
             "title": _json_value(summary["task_title"]),
             "status": _json_value(summary["status"]),
             "time_spent_seconds": _json_value(summary["duration_seconds"]),
@@ -243,6 +246,7 @@ def build_student_portfolio_data(
             "final_code": _json_value(summary["final_code"]),
             "code_analysis": _json_value(summary["code_analysis"]),
             "trajectory_png": _as_data_uri(generate_trajectory(processed, student_id, task_id)),
+            "badge_definition": badge_definitions.get(task_id),
             "badge": badge_state.get(task_id),
         })
 
