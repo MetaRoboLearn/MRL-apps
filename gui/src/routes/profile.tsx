@@ -75,7 +75,7 @@ function BadgeCatalog({ filter, setFilter, onClose }: { filter: BadgeFilter; set
                 <img src={badge.image_url} alt={badge.title} className="h-20 w-20 shrink-0 object-contain" />
                 <div>
                   <h3 className="font-bold text-gray-900">{badge.title}</h3>
-                  <p className="mt-1 text-sm text-gray-600">{badge.description || 'No description.'}</p>
+                  {badge.assigned && <p className="mt-1 text-sm text-gray-600">{badge.description || 'No description.'}</p>}
                   {!badge.assigned && <p className="mt-2 text-sm italic text-gray-500">{badge.unassigned_message || 'Complete the linked task to earn this badge.'}</p>}
                   {badge.comment && <p className="mt-2 text-sm italic text-gray-700">{badge.comment}</p>}
                 </div>
