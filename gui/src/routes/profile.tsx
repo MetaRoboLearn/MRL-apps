@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { getSubmissions } from '../api/analyticsApi.ts'
 import { getMyBadges } from '../api/userBadgeApi.ts'
 import { CodeAnalysisViewer } from '../components/Analytics/CodeAnalysisViewer.tsx'
+import { SubmissionCard } from '../components/Analytics/SubmissionCard.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { BadgeCatalogEntry } from '../types/userBadgeTypes.ts'
 import { Submission } from '../types/analyticsTypes.ts'
@@ -135,8 +136,23 @@ function ProfilePage() {
               {([['all', 'All'], ['success', 'Successful'], ['fail', 'Unsuccessful']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setSubmissionFilter(value)} className={`rounded-md px-3 py-2 text-sm font-medium ${submissionFilter === value ? 'bg-turquoise-500 text-white' : 'bg-gray-100 text-gray-700'}`}>{label}</button>)}
             </div>
           </div>
-          {/* TODO: you should fix this list code, it is ugly */}
-          {submissionsQuery.isLoading ? <p>Loading submissions...</p> : submissionsQuery.error ? <p className="text-red-600">{submissionsQuery.error.message}</p> : submissions.length === 0 ? <p className="py-8 text-center text-gray-500">No submissions found.</p> : <div className="space-y-3">{submissions.map((submission) => <article key={submission.activity_task_id} className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-gray-200 p-4"><div><p className="text-sm text-gray-500">{submission.activity_title || 'Activity'}</p><h3 className="font-semibold text-gray-900">{submission.task_name || `Task #${submission.task_id}`}</h3><p className="mt-1 text-sm capitalize text-gray-600">Task status - {submission.status.replace(/_/g, ' ')}{submission.attempt_date ? `, ${formatLocalDateTime(submission.attempt_date)}` : ''}</p></div><button type="button" onClick={() => setSelectedSubmission(submission)} className="rounded-md border border-turquoise-500 px-3 py-2 text-sm font-medium text-turquoise-700 hover:bg-turquoise-50">View submission</button></article>)}</div>}
+          {submissionsQuery.isLoading ? (
+            <p>Loading submissions...</p>
+          ) : submissionsQuery.error ? (
+            <p className="text-red-600">{submissionsQuery.error.message}</p>
+          ) : submissions.length === 0 ? (
+            <p className="py-8 text-center text-gray-500">No submissions found.</p>
+          ) : (
+            <div className="space-y-3">
+              {submissions.map((submission) => (
+                <SubmissionCard
+                  key={submission.activity_task_id}
+                  submission={submission}
+                  onView={setSelectedSubmission}
+                />
+              ))}
+            </div>
+          )}
         </section>}
       </div>
       {selectedSubmission && <SubmissionModal submission={selectedSubmission} onClose={() => setSelectedSubmission(null)} />}
