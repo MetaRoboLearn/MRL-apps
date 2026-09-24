@@ -28,7 +28,7 @@ function SubmissionModal({ submission, onClose }: { submission: Submission; onCl
             <p className="text-sm text-gray-500">{submission.activity_title || 'Activity'}</p>
             <h2 className="text-2xl font-bold text-gray-900">{submission.task_name || `Task #${submission.task_id}`}</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded border px-3 py-1 text-sm hover:bg-gray-50">Close</button>
+          <button type="button" onClick={onClose} className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">Close</button>
         </div>
         <dl className="mb-5 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
           <div><dt className="text-gray-500">Status</dt><dd className="font-semibold capitalize">{submission.status.replace(/_/g, ' ')}</dd></div>
@@ -59,7 +59,7 @@ function BadgeCatalog({ filter, setFilter, onClose }: { filter: BadgeFilter; set
       <div className="mx-auto max-w-4xl rounded-md bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 className="text-2xl font-bold text-gray-900">Badge catalog</h2>
-          <button type="button" onClick={onClose} className="rounded border px-3 py-1 text-sm hover:bg-gray-50">Close</button>
+          <button type="button" onClick={onClose} className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">Close</button>
         </div>
         <div className="mb-5 flex gap-2">
           {(['all', 'assigned', 'unassigned'] as BadgeFilter[]).map((value) => (

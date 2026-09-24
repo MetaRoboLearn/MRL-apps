@@ -10,6 +10,7 @@ from models.badge import Badge
 from analytics.visualisation_algorithm import (
     _as_data_uri,
     _json_value,
+    _task_label_value,
     build_student_portfolio_data,
     generate_duration_boxplot,
     generate_heatmap,
@@ -129,7 +130,7 @@ def build_reduced_submissions(
             "activity_task_id": task_id,
             "task_id": _json_value(summary["task_id"]),
             "activity_title": _json_value(summary["activity_title"]),
-            "task_name": _json_value(summary["task_title"]),
+            "task_name": _task_label_value(summary),
             "status": _build_reduced_task_status(_json_value(summary["status"])), #only show success/fail for student
             "attempt_date": _json_value(summary["first_attempt_at"]),
             "attempt_count": _json_value(summary["attempt_count"]),
