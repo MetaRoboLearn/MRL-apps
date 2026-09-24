@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useDropdown } from '../../hooks/useDropdown.ts'
 
 export type MultiSelectOption = {
   id: number
@@ -22,7 +23,7 @@ export function SearchableMultiSelect({
   disabled = false,
   loading = false,
 }: SearchableMultiSelectProps) {
-  const [open, setOpen] = useState(false)
+  const { dropdownRef, isOpen, toggle } = useDropdown<HTMLDivElement>()
   const [search, setSearch] = useState('')
   const selected = new Set(selectedIds)
   const visibleOptions = useMemo(() => {
@@ -30,7 +31,7 @@ export function SearchableMultiSelect({
     return options.filter((option) => option.label.toLowerCase().includes(normalizedSearch))
   }, [options, search])
 
-  const toggle = (id: number) => {
+  const toggleOption = (id: number) => {
     const next = new Set(selected)
     if (next.has(id)) next.delete(id)
     else next.add(id)
@@ -40,21 +41,21 @@ export function SearchableMultiSelect({
   const selectAll = () => onChange(options.map((option) => option.id))
 
   return (
-    <div className="relative min-w-64">
+    <div ref={dropdownRef} className="relative min-w-64">
       <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         className="flex min-h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:bg-gray-100"
       >
         <span className="truncate">
           {loading ? 'Loading...' : selectedIds.length === 0 ? `Select ${label.toLowerCase()}` : `${selectedIds.length} selected`}
         </span>
-        <span aria-hidden="true">{open ? '▲' : '▼'}</span>
+        <span aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
       </button>
 
-      {open && !disabled && (
+      {isOpen && !disabled && (
         <div className="absolute z-20 mt-1 w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg">
           <input
             type="search"
@@ -80,7 +81,7 @@ export function SearchableMultiSelect({
                   <input
                     type="checkbox"
                     checked={selected.has(option.id)}
-                    onChange={() => toggle(option.id)}
+                    onChange={() => toggleOption(option.id)}
                     className="mt-0.5"
                   />
                   <span>{option.label}</span>

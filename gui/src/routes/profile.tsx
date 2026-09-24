@@ -124,7 +124,7 @@ function ProfilePage() {
               <h1 className="text-3xl font-bold text-dark-neutrals-500">{user.first_name} {user.last_name}</h1>
               <p className="mt-1 text-lg text-dark-neutrals-300">@{user.username}</p>
             </div>
-            {user.role === 'student' && <div className="ml-auto flex items-center gap-4"><div className="text-right"><p className="text-sm font-bold uppercase text-dark-neutrals-300">Total badge value</p><p className="text-3xl font-bold text-sunglow-500">{totalPoints}</p></div><button type="button" onClick={() => setShowBadges(true)} className="rounded-md bg-turquoise-500 px-4 py-2 font-semibold text-white hover:bg-turquoise-600">View badges</button></div>}
+            {user.role === 'student' && <div className="ml-auto flex items-center gap-4"><div className="text-right"><p className="text-sm font-bold uppercase text-dark-neutrals-300">Total stars</p><p className="text-3xl font-bold text-sunglow-500">{totalPoints}</p></div><button type="button" onClick={() => setShowBadges(true)} className="rounded-md bg-turquoise-500 px-4 py-2 font-semibold text-white hover:bg-turquoise-600">View badges</button></div>}
           </div>
         </header>
 
