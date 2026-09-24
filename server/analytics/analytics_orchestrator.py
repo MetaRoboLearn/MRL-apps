@@ -16,6 +16,7 @@ from analytics.visualisation_algorithm import (
     generate_summary_metrics,
     generate_task_summary_table,
 )
+from analytics.session_outcomes import SESSION_OUTCOMES
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,14 @@ def _badge_definitions_for_tasks(session, activity_task_ids) -> dict[int, dict[s
         }
         for badge in badges
     }
+
+def _build_reduced_task_status(task_status: str) -> str:
+    """Reduce detailed task status to a simplified form."""
+    if task_status in (SESSION_OUTCOMES["SUCCESS_BOTH"], SESSION_OUTCOMES["SUCCESS_ROBOT"], SESSION_OUTCOMES["SUCCESS_SIM"]):
+        return "Success"
+    elif task_status in (SESSION_OUTCOMES["FAIL"], SESSION_OUTCOMES["ABANDONED"]):
+        return "Fail"
+    return "Fail"  # return by default
 
 
 def generate_group_analytics(session, filters: DatasetFilters) -> dict[str, Any]:
@@ -121,7 +130,7 @@ def build_reduced_submissions(
             "task_id": _json_value(summary["task_id"]),
             "activity_title": _json_value(summary["activity_title"]),
             "task_name": _json_value(summary["task_title"]),
-            "status": _json_value(summary["status"]),
+            "status": _build_reduced_task_status(_json_value(summary["status"])), #only show success/fail for student
             "attempt_date": _json_value(summary["first_attempt_at"]),
             "attempt_count": _json_value(summary["attempt_count"]),
             "duration_seconds": _json_value(summary["duration_seconds"]),

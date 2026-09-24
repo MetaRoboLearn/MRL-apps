@@ -13,6 +13,7 @@ from repositories.analytics_repository import AnalyticsRepository
 from validators.code_element_detection.analyzer_ast import analyze_code as analyze_code_ast
 from validators.code_element_detection.analyzer_regex import analyze_code as analyze_code_regex
 from validators.coding_standard_analyzer.coding_standard_analyzer import analyze_coding_standard
+from analytics.session_outcomes import SESSION_OUTCOMES
 
 logger = logging.getLogger(__name__)
 
@@ -171,21 +172,27 @@ def _process_session(group: pd.DataFrame) -> list[dict]:
             runs += 1
         elif action in ("sim_end_fail", "robot_end_fail", "sim_code_err", "robot_code_err"):
             fails += 1
-            records.append(_processed_record(row, edits, runs, fails, complexity, "Fail", False, final_code, code_analysis, standard_analysis))
+            records.append(_processed_record(row, edits, runs, fails, complexity, SESSION_OUTCOMES["FAIL"], False, final_code, code_analysis, standard_analysis))
         elif action in ("sim_end_succ", "robot_end_succ"):
             if action == "robot_end_succ" and has_robot_success:
                 continue
             completed = True
             has_sim_success |= action == "sim_end_succ"
             has_robot_success |= action == "robot_end_succ"
-            outcome = "Success_both" if has_sim_success and has_robot_success else ("Success_robot" if action == "robot_end_succ" else "Success_sim")
+            outcome = (
+                SESSION_OUTCOMES["SUCCESS_BOTH"]
+                if has_sim_success and has_robot_success
+                else SESSION_OUTCOMES["SUCCESS_ROBOT"]
+                if action == "robot_end_succ"
+                else SESSION_OUTCOMES["SUCCESS_SIM"]
+            )
             records.append(_processed_record(row, edits, runs, fails, complexity, outcome, True, final_code, code_analysis, standard_analysis))
         elif action == "task_finish":
             has_finish = True
             if not bool(row["db_is_finished"]) and not completed:
-                records.append(_processed_record(row, edits, runs, fails, complexity, "Abandoned", False, final_code, code_analysis, standard_analysis))
+                records.append(_processed_record(row, edits, runs, fails, complexity, SESSION_OUTCOMES["ABANDONED"], False, final_code, code_analysis, standard_analysis))
     if not bool(first["db_is_finished"]) and not has_finish and not completed:
-        records.append(_processed_record(group.iloc[-1], edits, runs, fails, complexity, "Abandoned", False, final_code, code_analysis, standard_analysis))
+        records.append(_processed_record(group.iloc[-1], edits, runs, fails, complexity, SESSION_OUTCOMES["ABANDONED"], False, final_code, code_analysis, standard_analysis))
     return records
 
 
