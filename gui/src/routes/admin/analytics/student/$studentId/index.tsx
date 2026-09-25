@@ -67,6 +67,9 @@ function RouteComponent() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['student-portfolio', numericStudentId] }),
   })
+  const suggestionMutation = useMutation({
+    mutationFn: ({ card }: { card: TaskCard }) => requestLlmFeedback(card.final_code || '', card.code_standard_analysis),
+  })
 
   if (portfolioQuery.isLoading) return <main className="p-6">Loading portfolio...</main>
   if (portfolioQuery.error) return <main className="p-6 text-red-600">{portfolioQuery.error.message}</main>
@@ -98,12 +101,14 @@ function RouteComponent() {
               key={card.activity_task_id}
               card={card}
               isMutating={mutation.isPending}
+              isSuggesting={suggestionMutation.isPending && suggestionMutation.variables?.card.activity_task_id === card.activity_task_id}
+              isSuggestionPending={suggestionMutation.isPending}
               onAssign={(selectedCard, comment) => mutation.mutate({ action: 'assign', card: selectedCard, comment })}
               onUpdate={(selectedCard, comment) => mutation.mutate({ action: 'update', card: selectedCard, comment })}
               onUnassign={(selectedCard) => mutation.mutate({ action: 'remove', card: selectedCard })}
               onSuggest={async (selectedCard, setComment) => {
                 try {
-                  const suggestion = await requestLlmFeedback(selectedCard.final_code || '', selectedCard.code_analysis)
+                  const suggestion = await suggestionMutation.mutateAsync({ card: selectedCard })
                   setComment(suggestion)
                 } catch (error) {
                   window.alert(error instanceof Error ? error.message : 'Failed to generate feedback')

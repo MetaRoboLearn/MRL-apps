@@ -314,6 +314,7 @@ def build_student_portfolio_data(
             "attempt_count": _json_value(summary["attempt_count"]),
             "final_code": _json_value(summary["final_code"]),
             "code_analysis": _json_value(summary["code_analysis"]),
+            "code_standard_analysis": _json_value(summary["code_standard_analysis"]),
             "trajectory_png": _as_data_uri(generate_trajectory(processed, student_id, task_id)),
             "badge_definition": badge_definitions.get(task_id),
             "badge": badge_state.get(task_id),

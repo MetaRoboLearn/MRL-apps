@@ -102,6 +102,7 @@ export type TaskCard = {
   final_code: string | null
   code_template?: string | null
   code_analysis: CodeAnalysis
+  code_standard_analysis: Record<string, unknown> | null
   trajectory_png: string
   badge_definition: BadgeDefinition | null
   badge: BadgeAssignment | null

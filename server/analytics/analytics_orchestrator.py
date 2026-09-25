@@ -21,6 +21,9 @@ from analytics.session_outcomes import SESSION_OUTCOMES
 
 logger = logging.getLogger(__name__)
 
+#TODO: This should be configurable by external env, hardcoded for now
+llm_feedback_api_base="http://192.168.178.94:1234/v1"
+model_name="google/gemma-4-26b-a4b-qat"
 
 def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
     """Return read-only badge state keyed by the linked activity task."""
@@ -162,7 +165,7 @@ def generate_llm_feedback(code: str, analysis: dict[str, Any] | None = None) -> 
         return {"error": "code is required"}
     logger.info("Starting LLM feedback generation: analysis_supplied=%s", analysis is not None)
     try:
-        generator = LLMFeedbackGenerator()
+        generator = LLMFeedbackGenerator(api_base=llm_feedback_api_base, model=model_name)
         suggestion = generator.generate_feedback(code, analysis)
     except Exception as error:  # provider errors, timeouts, invalid output
         logger.exception("LLM feedback generation failed")

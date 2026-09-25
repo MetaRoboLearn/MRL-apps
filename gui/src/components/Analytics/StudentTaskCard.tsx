@@ -10,6 +10,8 @@ type StudentTaskCardProps = {
   onUnassign: (card: TaskCard) => void
   onSuggest: (card: TaskCard, setComment: (comment: string) => void) => void
   isMutating: boolean
+  isSuggesting: boolean
+  isSuggestionPending: boolean
 }
 
 const statusLabel = (status: string) => status.replace(/_/g, ' ')
@@ -21,7 +23,7 @@ const statusClasses = (status: string) => {
   return 'bg-gray-100 text-gray-700 ring-gray-200'
 }
 
-export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSuggest, isMutating }: StudentTaskCardProps) {
+export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSuggest, isMutating, isSuggesting, isSuggestionPending }: StudentTaskCardProps) {
   const [comment, setComment] = useState(card.badge?.comment || '')
   const isAssigned = Boolean(card.badge)
 
@@ -72,7 +74,10 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
           <div className="flex flex-col gap-3 md:flex-row md:items-start">
             <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Teacher comment" rows={3} className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm" />
             <div className="flex flex-wrap gap-2 md:w-64">
-              <button type="button" disabled={isMutating} onClick={() => onSuggest(card, setComment)} className="rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">Suggest comment</button>
+              <button type="button" disabled={isMutating || isSuggestionPending} aria-busy={isSuggesting} onClick={() => onSuggest(card, setComment)} className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">
+                {isSuggesting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400/40 border-t-gray-700" aria-hidden="true" />}
+                {isSuggesting ? 'Generating comment...' : 'Suggest comment'}
+              </button>
               {isAssigned ? (
                 <>
                   <button type="button" disabled={isMutating} onClick={() => onUpdate(card, comment)} className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Update</button>
