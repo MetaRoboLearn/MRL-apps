@@ -102,7 +102,14 @@ def generate_heatmap(dataframe: pd.DataFrame) -> bytes:
     cmap = ListedColormap(["#f0f0f0", "#e74c3c", "#ff9800", "#b0b0b0", "#3498db", "#2ecc71"])
     norm = BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5], cmap.N)
     image = plt.imshow(matrix.to_numpy(), cmap=cmap, norm=norm, aspect="auto")
-    plt.colorbar(image, ticks=[0, 1, 2, 4, 5], label="Status")
+    colorbar = plt.colorbar(image, ticks=[0, 1, 2, 4, 5], label="Status")
+    colorbar.ax.set_yticklabels([
+        "No attempt",
+        "Fail",
+        "Abandoned",
+        "Success (simulation)",
+        "Success (robot/both)",
+    ])
     plt.xticks(np.arange(matrix.shape[1]), list(matrix.columns), rotation=45, ha="right")
     student_labels = values.drop_duplicates("_student").set_index("_student")["_student_label"]
     display_labels = []
@@ -198,9 +205,11 @@ def generate_trajectory(
     plt.scatter(failures["timestamp"], failures["code_complexity"], marker="x", c="red", label="Failed")
     plt.scatter(successes["timestamp"], successes["code_complexity"], marker="*", c="green", label="Success")
     plt.scatter(abandoned["timestamp"], abandoned["code_complexity"], marker="v", c="orange", label="Abandoned")
+    usernames = data.get("username", pd.Series(dtype=object)).dropna().astype(str).str.strip()
+    display_name = usernames.iloc[0] if not usernames.empty else str(user_id)
     plt.xlabel("Timeline")
     plt.ylabel("Code Complexity")
-    plt.title(f"Learning Trajectory: {user_id}")
+    plt.title(f"Learning Trajectory: {display_name}")
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
     plt.legend(loc="best")
     plt.tight_layout()

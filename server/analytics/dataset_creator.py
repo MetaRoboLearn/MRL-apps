@@ -189,8 +189,8 @@ def _process_session(group: pd.DataFrame) -> list[dict]:
             records.append(_processed_record(row, edits, runs, fails, complexity, outcome, True, final_code, code_analysis, standard_analysis))
         elif action == "task_finish":
             has_finish = True
-            if not bool(row["db_is_finished"]) and not completed:
-                records.append(_processed_record(row, edits, runs, fails, complexity, SESSION_OUTCOMES["ABANDONED"], False, final_code, code_analysis, standard_analysis))
+            if not completed:
+                records.append(_processed_record(row, edits, runs, fails, complexity, SESSION_OUTCOMES["FAIL"], False, final_code, code_analysis, standard_analysis))
     if not bool(first["db_is_finished"]) and not has_finish and not completed:
         records.append(_processed_record(group.iloc[-1], edits, runs, fails, complexity, SESSION_OUTCOMES["ABANDONED"], False, final_code, code_analysis, standard_analysis))
     return records
