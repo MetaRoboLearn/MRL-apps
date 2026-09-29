@@ -60,6 +60,13 @@ function RouteComponent() {
   const canCreate = groupIds.length > 0 && activityIds.length > 0 && !analyticsMutation.isPending
   const formatMetric = (value: number | null) => value === null ? '—' : Number(value.toFixed(2)).toString()
   const formatDifficulty = (value: number | null) => value === null ? '—' : `${value}`
+  const orderedStudents = useMemo(
+    () => [...(studentsQuery.data || [])].sort((left, right) => {
+      const lastNameOrder = left.last_name.localeCompare(right.last_name)
+      return lastNameOrder || left.first_name.localeCompare(right.first_name)
+    }),
+    [studentsQuery.data],
+  )
 
   return (
     <main className="min-h-full overflow-y-auto bg-gray-50 p-6">
@@ -156,7 +163,7 @@ function RouteComponent() {
               {studentsQuery.isLoading ? <p>Loading students...</p> : studentsQuery.error ? <p className="text-red-600">{studentsQuery.error.message}</p> : (
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">First name</th><th className="px-3 py-2">Last name</th><th className="px-3 py-2">Username</th><th className="px-3 py-2" /></tr></thead>
-                  <tbody>{(studentsQuery.data || []).map((student) => {
+                  <tbody>{orderedStudents.map((student) => {
                     const portfolioUrl = `/admin/analytics/student/${student.id}?group_ids=${encodeURIComponent(appliedFilters.groupIds.join(','))}&activity_ids=${encodeURIComponent(appliedFilters.activityIds.join(','))}`
                     return <tr key={student.id} className="border-b border-gray-100"><td className="px-3 py-2">{student.first_name}</td><td className="px-3 py-2">{student.last_name}</td><td className="px-3 py-2">@{student.username}</td><td className="px-3 py-2"><a className="text-blue-600 hover:underline" href={portfolioUrl} target="_blank" rel="noreferrer">View Card</a></td></tr>
                   })}</tbody>
