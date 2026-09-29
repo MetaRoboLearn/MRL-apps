@@ -13,7 +13,7 @@ from repositories.analytics_repository import AnalyticsRepository
 from validators.code_element_detection.analyzer_ast import analyze_code as analyze_code_ast
 from validators.code_element_detection.analyzer_regex import analyze_code as analyze_code_regex
 from validators.coding_standard_analyzer.coding_standard_analyzer import analyze_coding_standard
-from analytics.session_outcomes import SESSION_OUTCOMES
+from analytics.session_outcomes import SESSION_OUTCOME_PRIORITY, SESSION_OUTCOMES
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,14 @@ class DatasetFilters:
 
 
 def _text(value) -> str:
-    return "" if value is None else str(value)
+    return "" if _is_missing(value) else str(value)
+
+
+def _is_missing(value) -> bool:
+    try:
+        return bool(pd.isna(value))
+    except (TypeError, ValueError):
+        return False
 
 
 def _analyze_submission(code: str, app_mode: str) -> tuple[dict | None, dict | None]:
@@ -66,21 +73,25 @@ def _analyze_submission(code: str, app_mode: str) -> tuple[dict | None, dict | N
     return code_analysis, standard_analysis
 
 
-def _calculate_complexity(code: str, mode: str, template: str | None = None) -> int:
-    if not code:
+def _calculate_complexity(code: object, mode: str, template: object | None = None) -> int:
+    if _is_missing(code) or not code:
         return 0
     try:
-        if mode == "blockly" and code.strip().startswith("<xml"):
-            current_blocks = len(ET.fromstring(code).findall(".//block"))
-            template_blocks = (
-                len(ET.fromstring(template).findall(".//block"))
-                if template and template.strip().startswith("<xml") else 0
-            )
+        code_text = _text(code)
+        template_text = _text(template)
+        if mode == "blockly" and code_text.strip().startswith("<xml"):
+            current_blocks = len(ET.fromstring(code_text).findall(".//block"))
+            template_blocks = 0
+            if template_text.strip().startswith("<xml"):
+                try:
+                    template_blocks = len(ET.fromstring(template_text).findall(".//block"))
+                except ET.ParseError:
+                    pass
             return max(0, current_blocks - template_blocks)
-        current_lines = [line.strip() for line in code.splitlines() if line.strip()]
-        if not template:
+        current_lines = [line.strip() for line in code_text.splitlines() if line.strip()]
+        if not template_text:
             return len(current_lines)
-        template_lines = [line.strip() for line in template.splitlines() if line.strip()]
+        template_lines = [line.strip() for line in template_text.splitlines() if line.strip()]
         return sum((Counter(current_lines) - Counter(template_lines)).values())
     except (ET.ParseError, TypeError, ValueError):
         return 0
@@ -152,10 +163,15 @@ def _processed_record(row, edits, runs, fails, complexity, outcome, completed, f
     }
 
 
+def _best_outcome(outcomes) -> str | None:
+    observed = set(outcomes)
+    return next((outcome for outcome in SESSION_OUTCOME_PRIORITY if outcome in observed), None)
+
+
 def _process_session(group: pd.DataFrame) -> list[dict]:
     first = group.iloc[0]
     final_code = first["final_code_db"]
-    if pd.isna(final_code):
+    if _is_missing(final_code):
         values = group["value"].dropna().astype(str)
         final_code = values.iloc[-1] if not values.empty else ""
     code_analysis, standard_analysis = _analyze_submission(_text(final_code), _text(first["app_mode"]).lower())
@@ -189,8 +205,10 @@ def _process_session(group: pd.DataFrame) -> list[dict]:
             records.append(_processed_record(row, edits, runs, fails, complexity, outcome, True, final_code, code_analysis, standard_analysis))
         elif action == "task_finish":
             has_finish = True
+            db_is_finished = bool(row.get("db_is_finished", first.get("db_is_finished", False)))
             if not completed:
-                records.append(_processed_record(row, edits, runs, fails, complexity, SESSION_OUTCOMES["FAIL"], False, final_code, code_analysis, standard_analysis))
+                outcome = SESSION_OUTCOMES["FAIL"] if db_is_finished else SESSION_OUTCOMES["ABANDONED"]
+                records.append(_processed_record(row, edits, runs, fails, complexity, outcome, False, final_code, code_analysis, standard_analysis))
     if not bool(first["db_is_finished"]) and not has_finish and not completed:
         records.append(_processed_record(group.iloc[-1], edits, runs, fails, complexity, SESSION_OUTCOMES["ABANDONED"], False, final_code, code_analysis, standard_analysis))
     return records
@@ -249,7 +267,7 @@ def build_session_summaries(processed: pd.DataFrame) -> pd.DataFrame:
             "fail_count": last["fail_count"],
             "edit_count": last["edit_count"],
             "final_complexity": last["code_complexity"],
-            "status": last["session_outcome"],
+            "status": _best_outcome(group["session_outcome"]) or last["session_outcome"],
             "final_code": last["final_code"],
             "code_analysis": last["code_analysis"],
             "code_standard_analysis": last["code_standard_analysis"],

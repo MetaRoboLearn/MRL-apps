@@ -77,9 +77,9 @@ def generate_group_analytics(session, filters: DatasetFilters) -> dict[str, Any]
     )
     return {
         "summary_table": generate_summary_metrics(summaries),
-        "task_summary_table": generate_task_summary_table(summaries),
+        "task_summary_table": generate_task_summary_table(processed, summaries),
         "heatmap_png": _as_data_uri(generate_heatmap(processed)),
-        "boxplot_png": _as_data_uri(generate_duration_boxplot(summaries)),
+        "boxplot_png": _as_data_uri(generate_duration_boxplot(processed)),
         "student_ids": sorted(processed["user_id"].dropna().unique().tolist())
         if not processed.empty
         else [],

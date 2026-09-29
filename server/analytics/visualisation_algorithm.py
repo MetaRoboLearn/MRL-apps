@@ -124,25 +124,40 @@ def generate_heatmap(dataframe: pd.DataFrame) -> bytes:
     return _png_from_current_figure()
 
 
-def generate_duration_boxplot(summaries: pd.DataFrame) -> bytes:
+def _duration_data(processed: pd.DataFrame) -> pd.DataFrame:
+    """Collapse event rows to one maximum-duration observation per student/task."""
+    data = processed.copy()
+    data["_task"] = _task_key(data)
+    data["_task_label"] = _task_label(data)
+    data["_student_label"] = _student_label(data)
+    data["time_since_start_sec"] = pd.to_numeric(data["time_since_start_sec"], errors="coerce").fillna(0)
+    return (
+        data.groupby(["user_id", "_task"], sort=False)
+        .agg(
+            duration_seconds=("time_since_start_sec", "max"),
+            student_label=("_student_label", "first"),
+            task_label=("_task_label", "first"),
+        )
+        .reset_index()
+    )
+
+
+def generate_duration_boxplot(processed: pd.DataFrame) -> bytes:
     """Return cohort-level task duration distributions as PNG bytes."""
-    if summaries.empty:
+    if processed.empty:
         logger.info("Generating empty duration boxplot")
         return _empty_plot("No data available")
 
-    data = summaries.copy()
-    data["_task"] = _task_key(data)
-    data["_task_label"] = _task_label(data)
-    data["duration_seconds"] = pd.to_numeric(data["duration_seconds"], errors="coerce").fillna(0)
-    tasks = list(data["_task"].drop_duplicates())
-    logger.debug("Generating duration boxplot: summaries=%d tasks=%d", len(data), len(tasks))
+    task_durations = _duration_data(processed)
+    tasks = list(task_durations["_task"].drop_duplicates())
+    logger.debug("Generating duration boxplot: student_tasks=%d tasks=%d", len(task_durations), len(tasks))
     distributions = []
     student_names = []
     for task in tasks:
-        task_rows = data[data["_task"] == task]
+        task_rows = task_durations[task_durations["_task"] == task]
         distributions.append(task_rows["duration_seconds"].to_numpy(dtype=float))
-        student_names.append(task_rows.apply(lambda row: _student_label(pd.DataFrame([row])).iloc[0], axis=1).tolist())
-    task_labels = data.drop_duplicates("_task").set_index("_task")["_task_label"]
+        student_names.append(task_rows["student_label"].tolist())
+    task_labels = task_durations.drop_duplicates("_task").set_index("_task")["task_label"]
 
     figure, axis = plt.subplots(figsize=(max(8, min(30, 3 + len(tasks) * 2)), 7))
     axis.boxplot(distributions, showmeans=True)
@@ -199,11 +214,25 @@ def generate_trajectory(
         label = task_data["_task_label"].iloc[0]
         plt.plot(task_data["timestamp"], task_data["code_complexity"], label=label, alpha=0.75)
 
+    robot_successes = data[data["session_outcome"].isin(["Success_robot", "Success_both"])]
+    sim_successes = data[data["session_outcome"].isin(["Success_sim", "Success"])]
+    completion_values = data.get("is_task_completion", pd.Series(False, index=data.index))
+    completions = data[completion_values.fillna(False).astype(bool)]
     failures = data[data["session_outcome"] == "Fail"]
-    successes = data[data["session_outcome"].astype(str).str.startswith("Success")]
     abandoned = data[data["session_outcome"] == "Abandoned"]
-    plt.scatter(failures["timestamp"], failures["code_complexity"], marker="x", c="red", label="Failed")
-    plt.scatter(successes["timestamp"], successes["code_complexity"], marker="*", c="green", label="Success")
+    plt.scatter(
+        robot_successes["timestamp"], robot_successes["code_complexity"],
+        c="darkgreen", s=250, marker="*", label="Robot Success", zorder=10,
+    )
+    plt.scatter(
+        sim_successes["timestamp"], sim_successes["code_complexity"],
+        c="limegreen", s=200, marker="*", label="Simulation Success", zorder=10,
+    )
+    plt.scatter(
+        completions["timestamp"], completions["code_complexity"],
+        c="green", s=120, marker="o", edgecolors="black", alpha=0.6, label="Completion",
+    )
+    plt.scatter(failures["timestamp"], failures["code_complexity"], marker="x", c="red", label="Failed Attempt")
     plt.scatter(abandoned["timestamp"], abandoned["code_complexity"], marker="v", c="orange", label="Abandoned")
     usernames = data.get("username", pd.Series(dtype=object)).dropna().astype(str).str.strip()
     display_name = usernames.iloc[0] if not usernames.empty else str(user_id)
@@ -233,35 +262,43 @@ def generate_summary_metrics(summaries: pd.DataFrame) -> list[dict[str, Any]]:
     ]
 
 
-def generate_task_summary_table(summaries: pd.DataFrame) -> list[dict[str, Any]]:
+def generate_task_summary_table(processed: pd.DataFrame, summaries: pd.DataFrame) -> list[dict[str, Any]]:
     """Return one aggregate row for each selected activity task."""
-    if summaries.empty:
+    if processed.empty:
         return []
 
+    data = processed.copy()
+    data["_task"] = _task_key(data)
+    summary_data = summaries.copy()
+    summary_data["_task"] = _task_key(summary_data) if not summary_data.empty else pd.Series(dtype=object)
     rows = []
-    for activity_task_id, task_rows in summaries.groupby("activity_task_id", sort=False):
-        statuses = task_rows["status"].astype(str)
-        attempting_students = int(task_rows["user_id"].nunique())
-        successful_students = int(task_rows.loc[statuses.str.startswith("Success"), "user_id"].nunique())
-        successful_rows = task_rows[statuses.str.startswith("Success")]
-        durations = pd.to_numeric(task_rows["duration_seconds"], errors="coerce").dropna()
-        failures = pd.to_numeric(task_rows["fail_count"], errors="coerce").dropna()
+    for task_key in data["_task"].drop_duplicates():
+        task_rows = data[data["_task"] == task_key]
+        successful_rows = task_rows[task_rows["is_task_completion"] == True]
+        durations = pd.to_numeric(successful_rows["time_since_start_sec"], errors="coerce").dropna()
         edits = pd.to_numeric(successful_rows["edit_count"], errors="coerce").dropna()
-        complexity = pd.to_numeric(task_rows["final_complexity"], errors="coerce").dropna()
+        successful_complexity = pd.to_numeric(successful_rows["code_complexity"], errors="coerce").dropna()
+        complexity = pd.to_numeric(task_rows["code_complexity"], errors="coerce").dropna()
+        student_failures = task_rows.groupby("user_id", sort=False)["fail_count"].max()
+        average_failures = pd.to_numeric(student_failures, errors="coerce").dropna()
+        summary_rows = summary_data[summary_data["_task"] == task_key]
+        metadata = summary_rows.iloc[0] if not summary_rows.empty else task_rows.iloc[0]
+        activity_task_id = task_rows["activity_task_id"].dropna().iloc[0]
+        difficulty = task_rows["task_difficulty"].dropna()
         rows.append({
             "activity_task_id": int(activity_task_id),
-            "task_label": _task_label_value(task_rows.iloc[0]),
-            "task_difficulty": _json_value(task_rows["task_difficulty"].dropna().iloc[0]) if task_rows["task_difficulty"].notna().any() else None,
-            "success_rate": round((successful_students / attempting_students) * 100, 2) if attempting_students else 0,
+            "task_label": _task_label_value(metadata),
+            "task_difficulty": _json_value(difficulty.mode().iloc[0]) if not difficulty.mode().empty else None,
+            "success_rate": round((successful_rows["user_id"].nunique() / task_rows["user_id"].nunique()) * 100, 2) if task_rows["user_id"].nunique() else 0,
             "average_duration_seconds": _json_value(durations.mean()) if not durations.empty else None,
             "median_duration_seconds": _json_value(durations.median()) if not durations.empty else None,
-            "average_failures": _json_value(failures.mean()) if not failures.empty else None,
+            "average_failures": _json_value(average_failures.mean()) if not average_failures.empty else None,
             "average_edits_to_success": _json_value(edits.mean()) if not edits.empty else None,
-            "average_final_solution_complexity": _json_value(complexity.mean()) if not complexity.empty else None,
+            "average_final_solution_complexity": _json_value(successful_complexity.mean()) if not successful_complexity.empty else None,
             "min_task_complexity": _json_value(complexity.min()) if not complexity.empty else None,
             "max_task_complexity": _json_value(complexity.max()) if not complexity.empty else None,
-            "attempting_students": attempting_students,
-            "successful_students": successful_students,
+            "attempting_students": int(task_rows["user_id"].nunique()),
+            "successful_students": int(successful_rows["user_id"].nunique()),
         })
     return rows
 
