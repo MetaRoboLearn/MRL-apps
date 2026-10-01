@@ -3,50 +3,18 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { getSubmissions } from '../api/analyticsApi.ts'
 import { getMyBadges } from '../api/userBadgeApi.ts'
-import { CodeAnalysisViewer } from '../components/Analytics/CodeAnalysisViewer.tsx'
+import { SubmissionModal } from '../components/Analytics/SubmissionModal.tsx'
 import { SubmissionCard } from '../components/Analytics/SubmissionCard.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { BadgeCatalogEntry } from '../types/userBadgeTypes.ts'
-import { Submission } from '../types/analyticsTypes.ts'
-import { formatLocalDateTime } from '../utils.ts'
+import { Submission, SubmissionStatus } from '../types/analyticsTypes.ts'
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
 })
 
-type SubmissionFilter = 'all' | 'success' | 'fail'
+type SubmissionFilter = 'all' | 'success' | 'fail' | 'in_progress'
 type BadgeFilter = 'all' | 'assigned' | 'unassigned'
-
-const isSuccessful = (status: string) => status.startsWith('Success')
-
-function SubmissionModal({ submission, onClose }: { submission: Submission; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-md bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-gray-500">{submission.activity_title || 'Activity'}</p>
-            <h2 className="text-2xl font-bold text-gray-900">{submission.task_name || `Task #${submission.task_id}`}</h2>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">Close</button>
-        </div>
-        <dl className="mb-5 grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-          <div><dt className="text-gray-500">Status</dt><dd className="font-semibold capitalize">{submission.status.replace(/_/g, ' ')}</dd></div>
-          <div><dt className="text-gray-500">Duration</dt><dd className="font-semibold">{submission.duration_seconds}s</dd></div>
-          <div><dt className="text-gray-500">Attempts</dt><dd className="font-semibold">{submission.attempt_count}</dd></div>
-          <div><dt className="text-gray-500">Attempted</dt><dd className="font-semibold">{submission.attempt_date ? formatLocalDateTime(submission.attempt_date) : '—'}</dd></div>
-        </dl>
-        <CodeAnalysisViewer code={submission.final_code || ''} analysis={submission.code_analysis} />
-        {submission.badge?.comment && (
-          <div className="mt-5 rounded-md bg-sunglow-100 p-4">
-            <h3 className="font-semibold text-gray-800">Teacher comment</h3>
-            <p className="mt-1 text-gray-700">{submission.badge.comment}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 function BadgeCatalog({ filter, setFilter, onClose }: { filter: BadgeFilter; setFilter: (filter: BadgeFilter) => void; onClose: () => void }) {
   const { data: badges = [], isLoading, error } = useQuery({
@@ -107,9 +75,13 @@ function ProfilePage() {
 
   const submissions = useMemo(() => {
     const values = submissionsQuery.data || []
-    if (submissionFilter === 'success') return values.filter((submission) => isSuccessful(submission.status))
-    if (submissionFilter === 'fail') return values.filter((submission) => !isSuccessful(submission.status))
-    return values
+    if (submissionFilter === 'all') return values
+    const statusByFilter: Record<Exclude<SubmissionFilter, 'all'>, SubmissionStatus> = {
+      success: 'Success',
+      fail: 'Fail',
+      in_progress: 'in_progress',
+    }
+    return values.filter((submission) => submission.status === statusByFilter[submissionFilter])
   }, [submissionFilter, submissionsQuery.data])
   const totalPoints = (assignedBadgesQuery.data || []).reduce((sum, badge) => sum + badge.value, 0)
 
@@ -131,17 +103,17 @@ function ProfilePage() {
 
         {user.role === 'student' && <section className="rounded-md border border-white-smoke-500 bg-white p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-bold text-dark-neutrals-500">My activities</h2>
-            <div className="flex gap-2">
-              {([['all', 'All'], ['success', 'Successful'], ['fail', 'Unsuccessful']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setSubmissionFilter(value)} className={`rounded-md px-3 py-2 text-sm font-medium ${submissionFilter === value ? 'bg-turquoise-500 text-white' : 'bg-gray-100 text-gray-700'}`}>{label}</button>)}
+            <h2 className="text-2xl font-bold text-dark-neutrals-500">Moje aktivnosti</h2>
+            <div className="flex flex-wrap gap-2">
+              {([['all', 'Sve'], ['success', 'Uspješne'], ['fail', 'Neuspješne'], ['in_progress', 'U tijeku']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setSubmissionFilter(value)} className={`rounded-md px-3 py-2 text-sm font-medium ${submissionFilter === value ? 'bg-turquoise-500 text-white' : 'bg-gray-100 text-gray-700'}`}>{label}</button>)}
             </div>
           </div>
           {submissionsQuery.isLoading ? (
-            <p>Loading submissions...</p>
+            <p>Učitavanje predaja...</p>
           ) : submissionsQuery.error ? (
-            <p className="text-red-600">{submissionsQuery.error.message}</p>
+            <p className="text-red-600">Predaje nije moguće učitati.</p>
           ) : submissions.length === 0 ? (
-            <p className="py-8 text-center text-gray-500">No submissions found.</p>
+            <p className="py-8 text-center text-gray-500">Nema predaja za odabrani filtar.</p>
           ) : (
             <div className="space-y-3">
               {submissions.map((submission) => (

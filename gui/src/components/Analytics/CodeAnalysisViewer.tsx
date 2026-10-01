@@ -7,22 +7,23 @@ type CodeAnalysisViewerProps = {
   code: string
   analysis: CodeAnalysis
   template?: string | null
+  expanded?: boolean
 }
 
 // TODO: Making the legend configurable in the future could be useful
 const LEGEND_ELEMENTS = [
-  { type: 'variable_init', label: 'Variables (init)' },
-  { type: 'variable_use', label: 'Variables (use)' },
-  { type: 'comment', label: 'Comments' },
-  { type: 'loop', label: 'Loops' },
-  { type: 'branching', label: 'Branching' },
-  { type: 'function_def', label: 'User functions (def)' },
-  { type: 'builtin_call', label: 'Built-in functions (call)' },
-  { type: 'detect_object_call', label: 'Detect Object (call)' },
-  { type: 'detect_object_conf_call', label: 'Detect object confidence (call)' },
-  { type: 'user_function_call', label: 'User functions (call)' },
-  { type: 'list', label: 'Lists' },
-  { type: 'tuple', label: 'Tuples' },
+  { type: 'variable_init', label: 'Inicijalizacija varijable' },
+  { type: 'variable_use', label: 'Korištenje varijable' },
+  { type: 'comment', label: 'Komentar' },
+  { type: 'loop', label: 'Petlja' },
+  { type: 'branching', label: 'Grananje' },
+  { type: 'function_def', label: 'Definicija funkcije' },
+  { type: 'builtin_call', label: 'Ugrađeni poziv' },
+  { type: 'detect_object_call', label: 'Prepoznavanje objekata' },
+  { type: 'detect_object_conf_call', label: 'Provjera pouzdanosti prepoznavanja' },
+  { type: 'user_function_call', label: 'Korisnički poziv' },
+  { type: 'list', label: 'Lista' },
+  { type: 'tuple', label: 'N-torka' },
 ] as const
 
 const elementCount = (analysis: CodeAnalysis, elementType: string, elements: CodeElementRange[]) => {
@@ -70,7 +71,7 @@ const getTemplateLineIndexes = (code: string, template: string | null | undefine
   return templateLineIndexes
 }
 
-export function CodeAnalysisViewer({ code, analysis, template }: CodeAnalysisViewerProps) {
+export function CodeAnalysisViewer({ code, analysis, template, expanded = false }: CodeAnalysisViewerProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
   const styleDecorationsRef = useRef<string[]>([])
   const highlightDecorationsRef = useRef<string[]>([])
@@ -147,7 +148,7 @@ export function CodeAnalysisViewer({ code, analysis, template }: CodeAnalysisVie
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem]">
-      <div className="h-80 overflow-hidden rounded-md border border-gray-200">
+      <div className={`overflow-hidden rounded-md border border-gray-200 ${expanded ? 'h-[45vh] min-h-80 lg:h-[32rem]' : 'h-80'}`}>
         <Editor
           height="100%"
           defaultLanguage="python"
@@ -157,28 +158,28 @@ export function CodeAnalysisViewer({ code, analysis, template }: CodeAnalysisVie
           options={{ readOnly: true, minimap: { enabled: false }, wordWrap: 'on', padding: { top: 12 } }}
         />
       </div>
-      <aside className="h-80 min-h-0 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
-        <h3 className="mb-3 font-semibold text-gray-700">Detected elements</h3>
+      <aside className={`min-h-0 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3 text-sm ${expanded ? 'max-h-[45vh] lg:h-[32rem]' : 'h-80'}`}>
+        <h3 className="mb-3 font-semibold text-gray-700">Pronađeni elementi</h3>
         <div className="space-y-2">
         <label className="flex items-center gap-1">
           <input type="radio" name={radioGroup} checked={selectedElement === 'all'} onChange={() => setSelectedElement('all')} />
-          All
+          Svi elementi
         </label>
         {LEGEND_ELEMENTS.map(({ type, label }) => (
           <label key={type} className="flex items-center gap-2">
             <input type="radio" name={radioGroup} checked={selectedElement === type} onChange={() => setSelectedElement(type)} />
             <span>{label}</span>
-            <span className={elementCount(analysis, type, elements) === 0 ? 'font-semibold text-red-600' : 'font-semibold text-emerald-600'}>
-              ({elementCount(analysis, type, elements)} {elementCount(analysis, type, elements) === 1 ? 'appearance' : 'appearances'})
+            <span aria-label={`Broj pronađenih: ${elementCount(analysis, type, elements)}`} className={elementCount(analysis, type, elements) === 0 ? 'font-semibold text-red-600' : 'font-semibold text-emerald-600'}>
+              ({elementCount(analysis, type, elements)})
             </span>
           </label>
         ))}
-        {analysis?.error && <span className="block text-amber-700">{analysis.error}</span>}
-        {!analysis && <span className="block text-gray-500">No code analysis available.</span>}
+        {analysis?.error && <span className="block text-amber-700">Analiza koda naišla je na problem.</span>}
+        {!analysis && <span className="block text-gray-500">Analiza koda nije dostupna.</span>}
         </div>
       </aside>
       {template && template !== code && (
-        <p className="text-xs text-gray-500 lg:col-span-2">Template code is shown as the comparison baseline; submitted code is read-only.</p>
+        <p className="text-xs text-gray-500 lg:col-span-2">Predložak služi kao osnova za usporedbu; predani kod nije moguće uređivati.</p>
       )}
     </div>
   )

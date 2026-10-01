@@ -63,6 +63,8 @@ export type CodeAnalysis = {
   error?: string
 } | null
 
+export type SubmissionStatus = 'Success' | 'Fail' | 'in_progress'
+
 export type BadgeDefinition = {
   badge_id: number
   title: string
@@ -120,7 +122,7 @@ export type Submission = {
   task_id: number
   activity_title?: string | null
   task_name: string | null
-  status: string
+  status: SubmissionStatus
   attempt_date: string | null
   attempt_count: number
   duration_seconds: number

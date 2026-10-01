@@ -7,6 +7,7 @@ from analytics.dataset_creator import DatasetFilters, create_dataset
 from repositories.user_badge_repository import UserBadgeRepository
 from validators.llm_feedback_generator.llm_feedback_generator import LLMFeedbackGenerator
 from models.badge import Badge
+from models.activity import Activity
 from analytics.visualisation_algorithm import (
     _as_data_uri,
     _json_value,
@@ -18,6 +19,7 @@ from analytics.visualisation_algorithm import (
     generate_task_summary_table,
 )
 from analytics.session_outcomes import SESSION_OUTCOMES
+from utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +55,13 @@ def _badge_definitions_for_tasks(session, activity_task_ids) -> dict[int, dict[s
         for badge in badges
     }
 
-def _build_reduced_task_status(task_status: str) -> str:
-    """Reduce detailed task status to a simplified form."""
+def _build_reduced_task_status(task_status: str, activity_available: bool) -> str:
+    """Map analytics outcomes to student-facing status values."""
     if task_status in (SESSION_OUTCOMES["SUCCESS_BOTH"], SESSION_OUTCOMES["SUCCESS_ROBOT"], SESSION_OUTCOMES["SUCCESS_SIM"]):
         return "Success"
-    elif task_status in (SESSION_OUTCOMES["FAIL"], SESSION_OUTCOMES["ABANDONED"]):
+    elif task_status == SESSION_OUTCOMES["ABANDONED"]:
+        return "in_progress" if activity_available else "Fail"
+    elif task_status == SESSION_OUTCOMES["FAIL"]:
         return "Fail"
     return "Fail"  # return by default
 
@@ -122,6 +126,7 @@ def generate_student_portfolio(session, student_id: int, filters: DatasetFilters
 def build_reduced_submissions(
     summaries,
     badge_state: dict[int, dict[str, Any]],
+    activity_availability: dict[int, bool],
 ) -> list[dict[str, Any]]:
     """Build the student-facing reduced submission view (no teacher-only fields)."""
     if summaries.empty:
@@ -134,7 +139,10 @@ def build_reduced_submissions(
             "task_id": _json_value(summary["task_id"]),
             "activity_title": _json_value(summary["activity_title"]),
             "task_name": _task_label_value(summary),
-            "status": _build_reduced_task_status(_json_value(summary["status"])), #only show success/fail for student
+            "status": _build_reduced_task_status(
+                _json_value(summary["status"]),
+                activity_availability.get(int(summary["activity_id"]), False),
+            ),
             "attempt_date": _json_value(summary["first_attempt_at"]),
             "attempt_count": _json_value(summary["attempt_count"]),
             "duration_seconds": _json_value(summary["duration_seconds"]),
@@ -150,9 +158,22 @@ def generate_reduced_submissions(session, student_id: int) -> list[dict[str, Any
     logger.info("Generating reduced submissions for student_id=%s", student_id)
     filters = DatasetFilters(user_ids=(student_id,))
     _, summaries = create_dataset(session, filters)
+    activity_ids = {
+        int(activity_id)
+        for activity_id in summaries["activity_id"].dropna().unique()
+    } if not summaries.empty else set()
+    activities = session.query(Activity.id, Activity.active, Activity.time_to).filter(
+        Activity.id.in_(activity_ids)
+    ).all() if activity_ids else []
+    now = utc_now()
+    activity_availability = {
+        activity_id: bool(is_active) and (time_to is None or time_to >= now)
+        for activity_id, is_active, time_to in activities
+    }
     submissions = build_reduced_submissions(
         summaries,
         badge_state=_badge_state_for_user(session, student_id),
+        activity_availability=activity_availability,
     )
     logger.info("Reduced submissions generated: student_id=%s count=%d", student_id, len(submissions))
     return submissions
