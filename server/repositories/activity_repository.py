@@ -7,6 +7,7 @@ from sqlalchemy import or_, exists
 from access_policies import owns_activity
 from models import ActivityTask, User
 from models.activity import Activity
+from models.user_activity_task import UserActivityTask
 from repositories.base_repository import BaseRepository
 from utils import utc_now
 
@@ -110,7 +111,26 @@ class ActivityRepository(BaseRepository[Activity]):
         return q.order_by(Activity.time_from.asc().nullslast(), Activity.id.asc()).all()
 
     # ---------- READ ALL ACTIVITIES AVAILABLE TO STUDENTS ----------
-    def list_student_available_activities(self):
+    @staticmethod
+    def _student_task_is_available(activity_task, assigned_task_ids, now):
+        activity = activity_task.activity
+        if (
+            not activity
+            or not activity.active
+            or activity.time_from is None
+            or activity.time_to is None
+            or activity.time_from > now
+            or activity.time_to < now
+        ):
+            return False
+
+        if activity_task.student_mode == 'include':
+            return activity_task.id in assigned_task_ids
+        if activity_task.student_mode == 'exclude':
+            return activity_task.id not in assigned_task_ids
+        return True
+
+    def list_student_available_activities(self, user_id: int):
         now = utc_now()
         q = (
             self.session.query(Activity)
@@ -126,7 +146,39 @@ class ActivityRepository(BaseRepository[Activity]):
             .filter(Activity.time_to >= now)
         )
 
-        return q.all()
+        activities = q.all()
+        assigned_task_ids = {
+            row[0]
+            for row in self.session.query(UserActivityTask.activity_task_id)
+            .filter(UserActivityTask.user_id == user_id)
+            .all()
+        }
+
+        available_activities = []
+        for activity in activities:
+            available_tasks = [
+                activity_task
+                for activity_task in sorted(activity.activity_tasks, key=lambda item: item.order)
+                if self._student_task_is_available(activity_task, assigned_task_ids, now)
+            ]
+            if available_tasks:
+                available_activities.append((activity, available_tasks))
+
+        return available_activities
+
+    def is_student_task_available(self, activity_task_id: int, user_id: int) -> bool:
+        now = utc_now()
+        activity_task = self.session.get(ActivityTask, activity_task_id)
+        if not activity_task:
+            return False
+
+        assigned_task_ids = {
+            row[0]
+            for row in self.session.query(UserActivityTask.activity_task_id)
+            .filter(UserActivityTask.user_id == user_id)
+            .all()
+        }
+        return self._student_task_is_available(activity_task, assigned_task_ids, now)
 
     # ---------- CREATE ----------
     def create(

@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 
 from auth import role_required
 from database import db_session
+from repositories.activity_repository import ActivityRepository
 from repositories.user_started_task_repository import UserStartedTaskRepository
 from utils import parse_boolean_param, _to_utc_iso, utc_now
 
@@ -105,9 +106,14 @@ def create_user_started_task():
         return jsonify({"error": "Missing fields", "missing": missing}), 400
 
     with db_session() as session:
+        activity_repository = ActivityRepository(session)
+        activity_task_id = int(data["activity_task_id"])
+        if not activity_repository.is_student_task_available(activity_task_id, current_user.id):
+            return jsonify({"error": "Activity task is not currently available"}), 403
+
         repo = UserStartedTaskRepository(session)
         ust = repo.create(
-            activity_task_id=int(data["activity_task_id"]),
+            activity_task_id=activity_task_id,
             actor_user_id=current_user.id,
         )
         return jsonify(_user_started_task_to_dict(ust)), 201

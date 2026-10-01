@@ -5,8 +5,8 @@ import { getSubmissions } from '../api/analyticsApi.ts'
 import { getMyBadges } from '../api/userBadgeApi.ts'
 import { SubmissionModal } from '../components/Analytics/SubmissionModal.tsx'
 import { SubmissionCard } from '../components/Analytics/SubmissionCard.tsx'
+import { BadgeCatalog } from '../components/Badge/BadgeCatalog.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
-import { BadgeCatalogEntry } from '../types/userBadgeTypes.ts'
 import { Submission, SubmissionStatus } from '../types/analyticsTypes.ts'
 
 export const Route = createFileRoute('/profile')({
@@ -14,54 +14,12 @@ export const Route = createFileRoute('/profile')({
 })
 
 type SubmissionFilter = 'all' | 'success' | 'fail' | 'in_progress'
-type BadgeFilter = 'all' | 'assigned' | 'unassigned'
-
-function BadgeCatalog({ filter, setFilter, onClose }: { filter: BadgeFilter; setFilter: (filter: BadgeFilter) => void; onClose: () => void }) {
-  const { data: badges = [], isLoading, error } = useQuery({
-    queryKey: ['myBadges', filter],
-    queryFn: () => getMyBadges(filter),
-  })
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
-      <div className="mx-auto max-w-4xl rounded-md bg-white p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">Badge catalog</h2>
-          <button type="button" onClick={onClose} className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">Close</button>
-        </div>
-        <div className="mb-5 flex gap-2">
-          {(['all', 'assigned', 'unassigned'] as BadgeFilter[]).map((value) => (
-            <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-md px-3 py-2 text-sm font-medium ${filter === value ? 'bg-turquoise-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
-              {value[0].toUpperCase() + value.slice(1)}
-            </button>
-          ))}
-        </div>
-        {isLoading ? <p>Loading badges...</p> : error ? <p className="text-red-600">{error.message}</p> : badges.length === 0 ? <p className="text-gray-500">No badges found.</p> : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {badges.map((badge: BadgeCatalogEntry) => (
-              <article key={badge.badge_id} className={`flex gap-4 rounded-md border p-4 ${badge.assigned ? 'border-sunglow-300 bg-sunglow-50' : 'border-gray-200 bg-gray-100 opacity-70'}`}>
-                <img src={badge.image_url} alt={badge.title} className="h-20 w-20 shrink-0 object-contain" />
-                <div>
-                  <h3 className="font-bold text-gray-900">{badge.title}</h3>
-                  {badge.assigned && <p className="mt-1 text-sm text-gray-600">{badge.description || 'No description.'}</p>}
-                  {!badge.assigned && <p className="mt-2 text-sm italic text-gray-500">{badge.unassigned_message || 'Complete the linked task to earn this badge.'}</p>}
-                  {badge.comment && <p className="mt-2 text-sm italic text-gray-700">{badge.comment}</p>}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 function ProfilePage() {
   const { user } = useAuth()
   const [submissionFilter, setSubmissionFilter] = useState<SubmissionFilter>('all')
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
   const [showBadges, setShowBadges] = useState(false)
-  const [badgeFilter, setBadgeFilter] = useState<BadgeFilter>('all')
   const submissionsQuery = useQuery({
     queryKey: ['submissions'],
     queryFn: getSubmissions,
@@ -128,7 +86,7 @@ function ProfilePage() {
         </section>}
       </div>
       {selectedSubmission && <SubmissionModal submission={selectedSubmission} onClose={() => setSelectedSubmission(null)} />}
-      {showBadges && <BadgeCatalog filter={badgeFilter} setFilter={setBadgeFilter} onClose={() => setShowBadges(false)} />}
+      {showBadges && <BadgeCatalog onClose={() => setShowBadges(false)} />}
     </main>
   )
 }

@@ -19,4 +19,8 @@ export interface UserBadgeEntry {
 export interface BadgeCatalogEntry extends Omit<UserBadgeEntry, 'id' | 'created_at'> {
   id: number | null
   created_at: string | null
+  activity_id: number
+  activity_title: string
+  relevant_activity_task_id: number
+  assigned: boolean
 }
