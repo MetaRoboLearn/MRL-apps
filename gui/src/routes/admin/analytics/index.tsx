@@ -81,7 +81,7 @@ function RouteComponent() {
 
   return (
     <main className="min-h-full overflow-y-auto bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
+      <div className="w-full">
         <h1 className="mb-6 text-3xl font-bold text-gray-900">Group analytics</h1>
 
         <section className="mb-6 rounded-md border border-gray-200 bg-white p-4">
@@ -121,12 +121,12 @@ function RouteComponent() {
               <h2 className="mb-3 text-xl font-semibold text-gray-800">Summary</h2>
               <table className="min-w-full border-collapse text-left text-sm">
                 <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">Metric</th><th className="px-3 py-2">Value</th></tr></thead>
-                <tbody>{result.summary_table.map((metric) => <tr key={metric.metric_name} className="border-b border-gray-100"><td className="px-3 py-2">{metric.metric_name}</td><td className="px-3 py-2">{metric.value}</td></tr>)}</tbody>
+                <tbody>{result.summary_table.filter((metric) => metric.metric_name === 'students' || metric.metric_name === 'tasks').map((metric) => <tr key={metric.metric_name} className="border-b border-gray-100"><td className="px-3 py-2">{metric.metric_name === 'students' ? 'Učenici' : 'Zadaci'}</td><td className="px-3 py-2">{metric.value}</td></tr>)}</tbody>
               </table>
             </section>
-            <section className="rounded-md border border-gray-200 bg-white p-4">
-              <h2 className="mb-3 text-xl font-semibold text-gray-800">Per-task summary</h2>
-              <div className="overflow-x-auto">
+            <details className="rounded-md border border-gray-200 bg-white" open>
+              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Per-task summary</summary>
+              <div className="overflow-x-auto border-t border-gray-200 p-4">
                 <table className="min-w-[1100px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-gray-200">
@@ -137,9 +137,9 @@ function RouteComponent() {
                       <th className="px-3 py-2">Median duration</th>
                       <th className="px-3 py-2">Avg failures</th>
                       <th className="px-3 py-2">Avg edits to success</th>
-                      <th className="px-3 py-2">Avg final complexity</th>
-                      <th className="px-3 py-2">Min complexity</th>
-                      <th className="px-3 py-2">Max complexity</th>
+                      <th className="px-3 py-2">Prosjek broja linija</th>
+                      <th className="px-3 py-2">Najmanji broj linija</th>
+                      <th className="px-3 py-2">Najveći broj linija</th>
                       <th className="px-3 py-2">Attempting</th>
                       <th className="px-3 py-2">Successful</th>
                     </tr>
@@ -164,13 +164,20 @@ function RouteComponent() {
                   </tbody>
                 </table>
               </div>
-            </section>
-            <div className="grid gap-6 xl:grid-cols-2">
-              <AnalyticsImageViewer title="Performance matrix" src={result.heatmap_png} />
-              <AnalyticsImageViewer title="Task duration distribution" src={result.boxplot_png} />
+            </details>
+            <div className="flex flex-col gap-6">
+              <details open>
+                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Performance matrix</summary>
+                <AnalyticsImageViewer title="Performance matrix" src={result.heatmap_png} />
+              </details>
+              <details open>
+                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Task duration distribution</summary>
+                <AnalyticsImageViewer title="Task duration distribution" src={result.boxplot_png} />
+              </details>
             </div>
-            <section className="rounded-md border border-gray-200 bg-white p-4">
-              <h2 className="mb-3 text-xl font-semibold text-gray-800">Students</h2>
+            <details className="rounded-md border border-gray-200 bg-white" open>
+              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Students</summary>
+              <div className="overflow-x-auto border-t border-gray-200 p-4">
               {studentsQuery.isLoading ? <p>Loading students...</p> : studentsQuery.error ? <p className="text-red-600">{studentsQuery.error.message}</p> : (
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">First name</th><th className="px-3 py-2">Last name</th><th className="px-3 py-2">Username</th><th className="px-3 py-2" /></tr></thead>
@@ -180,7 +187,8 @@ function RouteComponent() {
                   })}</tbody>
                 </table>
               )}
-            </section>
+              </div>
+            </details>
           </div>
         )}
       </div>

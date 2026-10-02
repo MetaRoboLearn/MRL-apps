@@ -52,7 +52,7 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
       </div>
 
       <div className="mb-5 rounded-md bg-gray-50 p-4 text-sm">
-        <h3 className="mb-2 font-semibold text-gray-800">Code complexity</h3>
+        <h3 className="mb-2 font-semibold text-gray-800">Broj linija</h3>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <span>Min: {card.code_complexity.min}</span>
           <span>Average: {card.code_complexity.average}</span>

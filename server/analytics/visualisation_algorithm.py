@@ -237,7 +237,7 @@ def generate_trajectory(
     usernames = data.get("username", pd.Series(dtype=object)).dropna().astype(str).str.strip()
     display_name = usernames.iloc[0] if not usernames.empty else str(user_id)
     plt.xlabel("Timeline")
-    plt.ylabel("Code Complexity")
+    plt.ylabel("Broj linija")
     plt.title(f"Learning Trajectory: {display_name}")
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
     plt.legend(loc="best")
