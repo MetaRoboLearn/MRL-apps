@@ -16,6 +16,7 @@ type StudentSelectorProps = {
   selectedEmptyLabel: string
   actionClassName?: string
   selectedClassName?: string
+  batchSelector?: ReactNode
   onSearchChange: (value: string) => void
   onSearch: () => void
   onPageChange: (page: number) => void
@@ -37,6 +38,7 @@ export function StudentSelector({
   selectedEmptyLabel,
   actionClassName = 'bg-green-100 text-green-700 hover:bg-green-200',
   selectedClassName = 'bg-blue-50',
+  batchSelector,
   onSearchChange,
   onSearch,
   onPageChange,
@@ -50,6 +52,8 @@ export function StudentSelector({
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="lg:w-1/2 bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold mb-4">All Students</h3>
+
+          {batchSelector}
 
           <div className="flex gap-2 mb-3">
             <input

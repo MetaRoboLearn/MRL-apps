@@ -7,7 +7,8 @@ import {
   setActivityTaskStudents
 } from "../../../../../../api/activitiesApi.ts"
 import { getUsersByIds } from "../../../../../../api/usersApi.ts"
-import {  StudentSelector } from "../../../../../../components/User/StudentSelector.tsx"
+import { GroupBatchSelector } from "../../../../../../components/User/GroupBatchSelector.tsx"
+import { StudentSelector } from "../../../../../../components/User/StudentSelector.tsx"
 import type { SelectableStudent } from "../../../../../../types/userTypes.ts"
 
 
@@ -103,6 +104,12 @@ function RouteComponent() {
     })
   }
 
+  const includeStudents = (studentIds: number[]) => {
+    if (studentIds.length === 0) return
+    setIsDirty(true)
+    setSelectedIds((previous) => new Set([...previous, ...studentIds]))
+  }
+
   const handleModeChange = (newMode: StudentMode) => {
     setIsDirty(true)
     setMode(newMode)
@@ -171,6 +178,9 @@ function RouteComponent() {
           selectedEmptyLabel={`No students ${mode === 'exclude' ? 'excluded' : 'added'} yet.`}
           actionClassName={mode === 'exclude' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : undefined}
           selectedClassName={mode === 'exclude' ? 'bg-orange-50' : undefined}
+          batchSelector={(
+            <GroupBatchSelector selectedIds={selectedIds} onIncludeStudents={includeStudents} />
+          )}
           onSearchChange={setSearch}
           onSearch={handleSearch}
           onPageChange={setPage}
