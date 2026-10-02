@@ -42,6 +42,7 @@ class DatasetFilters:
     ignore_task_ids: bool = False
     excluded_usernames: tuple[str, ...] = ()
     excluded_task_previews: tuple[str, ...] = ()
+    include_unassigned: bool = False
 
 
 def _text(value) -> str:

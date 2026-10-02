@@ -13,7 +13,10 @@ import { GroupAnalyticsResponse } from '../../../types/analyticsTypes.ts'
 const analyticsSearchSchema = z.object({
   group_ids: z.array(z.number()).optional().default([]),
   activity_ids: z.array(z.number()).optional().default([]),
+  include_unassigned: z.preprocess((value) => value === true || value === 'true', z.boolean()).optional().default(false),
 })
+
+type GroupSelectionId = number | 'unassigned'
 
 export const Route = createFileRoute('/admin/analytics/')({
   validateSearch: analyticsSearchSchema,
@@ -22,10 +25,13 @@ export const Route = createFileRoute('/admin/analytics/')({
 
 function RouteComponent() {
   const search = Route.useSearch()
-  const [groupIds, setGroupIds] = useState(search.group_ids)
+  const [groupSelection, setGroupSelection] = useState<GroupSelectionId[]>(() => [
+    ...search.group_ids,
+    ...(search.include_unassigned ? ['unassigned' as const] : []),
+  ])
   const [activityIds, setActivityIds] = useState(search.activity_ids)
   const [result, setResult] = useState<GroupAnalyticsResponse | null>(null)
-  const [appliedFilters, setAppliedFilters] = useState({ groupIds: search.group_ids, activityIds: search.activity_ids })
+  const [appliedFilters, setAppliedFilters] = useState({ groupIds: search.group_ids, activityIds: search.activity_ids, includeUnassigned: search.include_unassigned })
 
   const groupsQuery = useQuery({ queryKey: ['analytics-groups'], queryFn: getGroups })
   const activitiesQuery = useQuery({
@@ -39,7 +45,9 @@ function RouteComponent() {
   })
   const analyticsMutation = useMutation({
     mutationFn: async () => {
-      const filters = { groupIds: [...groupIds], activityIds: [...activityIds] }
+      const groupIds = groupSelection.filter((id): id is number => typeof id === 'number')
+      const includeUnassigned = groupSelection.includes('unassigned')
+      const filters = { groupIds: [...groupIds], activityIds: [...activityIds], includeUnassigned }
       return { analytics: await getGroupAnalytics(filters), filters }
     },
     onSuccess: ({ analytics, filters }) => {
@@ -48,8 +56,11 @@ function RouteComponent() {
     },
   })
 
-  const groupOptions: MultiSelectOption[] = useMemo(
-    () => (groupsQuery.data || []).map((group) => ({ id: group.group_id, label: group.group_name })),
+  const groupOptions: MultiSelectOption<GroupSelectionId>[] = useMemo(
+    () => [
+      ...(groupsQuery.data || []).map((group) => ({ id: group.group_id, label: group.group_name })),
+      { id: 'unassigned', label: 'Neraspoređeno' },
+    ],
     [groupsQuery.data],
   )
   const activityOptions: MultiSelectOption[] = useMemo(
@@ -57,7 +68,7 @@ function RouteComponent() {
     [activitiesQuery.data],
   )
 
-  const canCreate = groupIds.length > 0 && activityIds.length > 0 && !analyticsMutation.isPending
+  const canCreate = groupSelection.length > 0 && activityIds.length > 0 && !analyticsMutation.isPending
   const formatMetric = (value: number | null) => value === null ? '—' : Number(value.toFixed(2)).toString()
   const formatDifficulty = (value: number | null) => value === null ? '—' : `${value}`
   const orderedStudents = useMemo(
@@ -78,8 +89,8 @@ function RouteComponent() {
             <SearchableMultiSelect
               label="Groups"
               options={groupOptions}
-              selectedIds={groupIds}
-              onChange={setGroupIds}
+              selectedIds={groupSelection}
+              onChange={setGroupSelection}
               loading={groupsQuery.isLoading}
             />
             <SearchableMultiSelect
@@ -99,9 +110,9 @@ function RouteComponent() {
             </button>
           </div>
           {analyticsMutation.error && <p className="mt-3 text-sm text-red-600">{analyticsMutation.error.message}</p>}
-          {groupIds.length === 0 || activityIds.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">Select at least one group and activity.</p>
-          ) : null}
+          {groupSelection.length === 0 || activityIds.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-500">Odaberite barem jednu grupu ili neraspoređene učenike te aktivnost.</p>
+          ) : null }
         </section>
 
         {result && (
@@ -164,7 +175,7 @@ function RouteComponent() {
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">First name</th><th className="px-3 py-2">Last name</th><th className="px-3 py-2">Username</th><th className="px-3 py-2" /></tr></thead>
                   <tbody>{orderedStudents.map((student) => {
-                    const portfolioUrl = `/admin/analytics/student/${student.id}?group_ids=${encodeURIComponent(appliedFilters.groupIds.join(','))}&activity_ids=${encodeURIComponent(appliedFilters.activityIds.join(','))}`
+                    const portfolioUrl = `/admin/analytics/student/${student.id}?group_ids=${encodeURIComponent(appliedFilters.groupIds.join(','))}&activity_ids=${encodeURIComponent(appliedFilters.activityIds.join(','))}&include_unassigned=${appliedFilters.includeUnassigned}`
                     return <tr key={student.id} className="border-b border-gray-100"><td className="px-3 py-2">{student.first_name}</td><td className="px-3 py-2">{student.last_name}</td><td className="px-3 py-2">@{student.username}</td><td className="px-3 py-2"><a className="text-blue-600 hover:underline" href={portfolioUrl} target="_blank" rel="noreferrer">View Card</a></td></tr>
                   })}</tbody>
                 </table>

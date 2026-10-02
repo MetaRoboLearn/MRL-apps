@@ -109,6 +109,7 @@ def generate_student_portfolio(session, student_id: int, filters: DatasetFilters
         ignore_task_ids=filters.ignore_task_ids,
         excluded_usernames=filters.excluded_usernames,
         excluded_task_previews=filters.excluded_task_previews,
+        include_unassigned=filters.include_unassigned,
     )
     processed, summaries = create_dataset(session, scoped_filters)
     badge_definitions = _badge_definitions_for_tasks(session, summaries.get("activity_task_id", []))

@@ -20,6 +20,7 @@ export const getUsers = async (params: {
   active_only?: boolean;
   search?: string;
   order_by_username?: boolean;
+  group_assignment?: 'assigned' | 'unassigned';
 }) => {
   const queryParams = new URLSearchParams();
   
@@ -29,6 +30,7 @@ export const getUsers = async (params: {
   if (params.active_only !== undefined) queryParams.set('active_only', params.active_only.toString());
   if (params.search) queryParams.set('search', params.search);
   if (params.order_by_username) queryParams.set('order_by_username', params.order_by_username.toString());
+  if (params.group_assignment) queryParams.set('group_assignment', params.group_assignment);
   
   const response = await fetch(`/api/users/?${queryParams}`, {
     credentials: 'include'

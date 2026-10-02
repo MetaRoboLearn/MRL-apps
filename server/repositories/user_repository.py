@@ -1,8 +1,9 @@
-from typing import Optional, Iterable, Any, List
+from typing import Optional, Any, List
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from sqlalchemy import case, exists, or_
 
 from models.user import User, Role
+from models.user_groups import UserGroups
 from repositories.base_repository import BaseRepository
 from utils import utc_now
 
@@ -31,7 +32,56 @@ class UserRepository(BaseRepository[User]):
         active_only: Optional[bool] = None,
         search: Optional[str] = None,
         order_by_username: bool = False,
+        group_assignment: Optional[str] = None,
     ) -> list[User]:
+        return self._list_query(
+            skip=skip,
+            limit=limit,
+            role_id=role_id,
+            active_only=active_only,
+            search=search,
+            order_by_username=order_by_username,
+            group_assignment=group_assignment,
+        ).all()
+
+    def list_with_assignment_status(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+        role_id: Optional[int] = None,
+        active_only: Optional[bool] = None,
+        search: Optional[str] = None,
+        order_by_username: bool = False,
+        group_assignment: Optional[str] = None,
+    ) -> List[tuple[User, bool]]:
+        query = self._list_query(
+            skip=skip,
+            limit=limit,
+            role_id=role_id,
+            active_only=active_only,
+            search=search,
+            order_by_username=order_by_username,
+            group_assignment=group_assignment,
+        )
+        has_group = exists().where(UserGroups.user_id == User.id)
+        is_unassigned = case(
+            (User.role.has(name="student"), ~has_group),
+            else_=False,
+        ).label("is_unassigned")
+        return query.add_columns(is_unassigned).all()
+
+    def _list_query(
+        self,
+        *,
+        skip: int,
+        limit: int,
+        role_id: Optional[int],
+        active_only: Optional[bool],
+        search: Optional[str],
+        order_by_username: bool,
+        group_assignment: Optional[str],
+    ):
         q = self.session.query(User).options(joinedload(User.role))
 
         if role_id is not None:
@@ -39,6 +89,12 @@ class UserRepository(BaseRepository[User]):
 
         if active_only:
             q = q.filter(User.active.is_(True))
+
+        has_group = exists().where(UserGroups.user_id == User.id)
+        if group_assignment == "unassigned":
+            q = q.filter(User.role.has(name="student"), ~has_group)
+        elif group_assignment == "assigned":
+            q = q.filter(User.role.has(name="student"), has_group)
 
         if search:
             like = f"%{search}%"
@@ -55,7 +111,7 @@ class UserRepository(BaseRepository[User]):
         else:
             q = q.order_by(User.id.asc())
 
-        return q.offset(skip).limit(limit).all()
+        return q.offset(skip).limit(limit)
 
     # ---------- CREATE ----------
     def create(

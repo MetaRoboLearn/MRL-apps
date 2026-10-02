@@ -1,28 +1,28 @@
 import { useMemo, useState } from 'react'
 import { useDropdown } from '../../hooks/useDropdown.ts'
 
-export type MultiSelectOption = {
-  id: number
+export type MultiSelectOption<Id extends number | string = number> = {
+  id: Id
   label: string
 }
 
-type SearchableMultiSelectProps = {
+type SearchableMultiSelectProps<Id extends number | string> = {
   label: string
-  options: MultiSelectOption[]
-  selectedIds: number[]
-  onChange: (selectedIds: number[]) => void
+  options: MultiSelectOption<Id>[]
+  selectedIds: Id[]
+  onChange: (selectedIds: Id[]) => void
   disabled?: boolean
   loading?: boolean
 }
 
-export function SearchableMultiSelect({
+export function SearchableMultiSelect<Id extends number | string>({
   label,
   options,
   selectedIds,
   onChange,
   disabled = false,
   loading = false,
-}: SearchableMultiSelectProps) {
+}: SearchableMultiSelectProps<Id>) {
   const { dropdownRef, isOpen, toggle } = useDropdown<HTMLDivElement>()
   const [search, setSearch] = useState('')
   const selected = new Set(selectedIds)
@@ -31,7 +31,7 @@ export function SearchableMultiSelect({
     return options.filter((option) => option.label.toLowerCase().includes(normalizedSearch))
   }, [options, search])
 
-  const toggleOption = (id: number) => {
+  const toggleOption = (id: Id) => {
     const next = new Set(selected)
     if (next.has(id)) next.delete(id)
     else next.add(id)

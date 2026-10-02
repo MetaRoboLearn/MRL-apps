@@ -71,16 +71,6 @@ def replace_group_members(group_id: int):
             return jsonify({"error": "One or more users were not found", "user_ids": missing_ids}), 404
 
         user_groups_repo = UserGroupsRepository(session)
-        orphaned_students = user_groups_repo.students_orphaned_by_replacement(
-            group_id,
-            set(user_ids),
-        )
-        if orphaned_students:
-            return jsonify({
-                "error": "Cannot remove students from their last group",
-                "usernames": orphaned_students,
-            }), 409
-
         try:
             user_groups_repo.replace_members(
                 group_id,

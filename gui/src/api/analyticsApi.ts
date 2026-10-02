@@ -5,10 +5,11 @@ import {
   Submission,
 } from '../types/analyticsTypes.ts'
 
-const buildFilters = ({ groupIds, activityIds }: AnalyticsFilters) => {
+const buildFilters = ({ groupIds, activityIds, includeUnassigned }: AnalyticsFilters) => {
   const params = new URLSearchParams()
   params.set('group_ids', groupIds.join(','))
   params.set('activity_ids', activityIds.join(','))
+  params.set('include_unassigned', includeUnassigned.toString())
   return params
 }
 

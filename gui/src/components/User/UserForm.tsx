@@ -10,7 +10,7 @@ type UserFormData = {
   first_name: string
   last_name: string
   role_id: number
-  initial_group_id: number | ''
+  initial_group_id: number | 'unassigned' | ''
 }
 
 type UserFormPropsCreate = {
@@ -43,7 +43,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     role_id: user?.role_id || roles[roles.length - 1]?.id || 1,
-    initial_group_id: '',
+    initial_group_id: 'unassigned',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -56,7 +56,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         first_name: user.first_name,
         last_name: user.last_name,
         role_id: user.role_id,
-        initial_group_id: '',
+        initial_group_id: 'unassigned',
       })
     }
   }, [user])
@@ -83,10 +83,6 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
     }
     if (!formData.last_name.trim()) {
       newErrors.last_name = 'Last name is required'
-    }
-
-    if (!isEditing && isStudentRole && formData.initial_group_id === '') {
-      newErrors.initial_group_id = 'Initial group is required for students'
     }
 
     setErrors(newErrors)
@@ -124,7 +120,9 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         first_name: formData.first_name,
         last_name: formData.last_name,
         role_id: formData.role_id,
-        ...(isStudentRole ? { initial_group_id: formData.initial_group_id as number } : {}),
+        ...(isStudentRole && typeof formData.initial_group_id === 'number'
+          ? { initial_group_id: formData.initial_group_id }
+          : {}),
       }
 
       await (onSubmit as (data: CreateUserRequest) => Promise<void>)(submitData)
@@ -135,15 +133,16 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target
+    const nextRoleName = roles.find((role) => role.id === Number(value))?.name.toLowerCase()
     setFormData((prev) => ({
       ...prev,
       [name]: name === 'role_id'
         ? Number(value)
         : name === 'initial_group_id'
-          ? (value ? Number(value) : '')
+          ? value === 'unassigned' ? 'unassigned' : value ? Number(value) : ''
           : value,
-      ...(name === 'role_id' && roles.find((role) => role.id === Number(value))?.name.toLowerCase() !== 'student'
-        ? { initial_group_id: '' }
+      ...(name === 'role_id'
+        ? { initial_group_id: nextRoleName === 'student' ? prev.initial_group_id || 'unassigned' : '' }
         : {}),
     }))
     // Clear error for this field when user starts typing
@@ -270,7 +269,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         {!isEditing && isStudentRole && (
           <div>
             <label htmlFor="initial_group_id" className="block text-sm font-medium mb-1">
-              Initial group *
+              Početna grupa
             </label>
             <select
               id="initial_group_id"
@@ -281,7 +280,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
                 errors.initial_group_id ? 'border-red-500' : 'border-gray-300'
               }`}
             >
-              <option value="">Select an initial group...</option>
+              <option value="unassigned">Neraspoređeno</option>
               {groups.map((group) => (
                 <option key={group.group_id} value={group.group_id}>
                   {group.group_name}

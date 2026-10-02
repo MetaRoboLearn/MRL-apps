@@ -19,6 +19,7 @@ const usersSearchSchema = z.object({
   active_only: z.boolean().optional(),
   search: z.string().optional(),
   order_by_username: z.boolean().optional().default(false),
+  group_assignment: z.enum(['assigned', 'unassigned']).optional(),
 })
 
 type UsersSearch = z.infer<typeof usersSearchSchema>
@@ -60,6 +61,13 @@ const columns = [
   columnHelper.accessor('role_name', {
     header: 'Role',
     cell: info => capitalizeFirstLetter(info.getValue()),
+  }),
+  columnHelper.display({
+    id: 'group_assignment',
+    header: 'Grupa',
+    cell: ({ row }) => row.original.role_name.toLowerCase() === 'student'
+      ? row.original.is_unassigned ? 'Neraspoređen' : 'Raspoređen'
+      : '—',
   }),
   columnHelper.accessor('last_login', {
     header: 'Last Login',
@@ -153,15 +161,37 @@ function RouteComponent() {
             <label className="block text-sm font-medium mb-1">Role</label>
             <select
               value={search.role_id || ''}
-              onChange={(e) => updateSearch({
-                role_id: e.target.value ? parseInt(e.target.value) : undefined
-              })}
+              onChange={(e) => {
+                const roleId = e.target.value ? parseInt(e.target.value) : undefined
+                updateSearch({
+                  role_id: roleId,
+                  group_assignment: roleId === 3 ? search.group_assignment : undefined,
+                  skip: 0,
+                })
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               <option value="">All Roles</option>
               <option value="1">Admin</option>
               <option value="2">Teacher</option>
               <option value="3">Student</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Status grupe</label>
+            <select
+              value={search.group_assignment || ''}
+              onChange={(e) => updateSearch({
+                role_id: e.target.value ? 3 : search.role_id,
+                group_assignment: e.target.value ? e.target.value as 'assigned' | 'unassigned' : undefined,
+                skip: 0,
+              })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Svi</option>
+              <option value="assigned">Raspoređeni</option>
+              <option value="unassigned">Neraspoređeni</option>
             </select>
           </div>
 
@@ -247,7 +277,15 @@ function RouteComponent() {
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map(row => (
+            {table.getRowModel().rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                  {search.group_assignment === 'unassigned'
+                    ? 'Nema neraspoređenih učenika.'
+                    : 'Nema korisnika za odabrane filtre.'}
+                </td>
+              </tr>
+            ) : table.getRowModel().rows.map(row => (
               <tr
                 key={row.id}
                 onClick={() => navigate({ to: '/admin/users/$userId', params: { userId: row.original.id.toString() } })}

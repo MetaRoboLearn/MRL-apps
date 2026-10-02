@@ -122,17 +122,27 @@ class AnalyticsRepository:
             )
         if filters.user_ids:
             query = query.filter(UserStartedTask.started_by.in_(filters.user_ids))
-        if filters.group_ids:
-            query = query.filter(
-                exists().where(
-                    and_(
-                        UserGroups.user_id == UserStartedTask.started_by,
-                        UserGroups.group_id.in_(filters.group_ids),
-                        UserGroups.group_id == Group.id,
-                        group_read_scope(Group, actor_user_id, actor_role),
+        if filters.group_ids or filters.include_unassigned:
+            group_conditions = []
+            if filters.group_ids:
+                group_conditions.append(
+                    exists().where(
+                        and_(
+                            UserGroups.user_id == UserStartedTask.started_by,
+                            UserGroups.group_id.in_(filters.group_ids),
+                            UserGroups.group_id == Group.id,
+                            group_read_scope(Group, actor_user_id, actor_role),
+                        )
                     )
                 )
-            )
+            if filters.include_unassigned:
+                group_conditions.append(
+                    and_(
+                        User.role.has(name="student"),
+                        ~exists().where(UserGroups.user_id == UserStartedTask.started_by),
+                    )
+                )
+            query = query.filter(or_(*group_conditions))
         if filters.date_filter:
             query = query.filter(UserStartedTask.started_at.cast(date) == filters.date_filter)
         if filters.excluded_usernames:

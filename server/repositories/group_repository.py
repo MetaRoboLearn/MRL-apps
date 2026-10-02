@@ -4,10 +4,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from access_policies import owns_group
 from models.groups import Group
-from models.user import User
 from models.user_groups import UserGroups
 from repositories.base_repository import BaseRepository
-from repositories.user_groups_repository import UserGroupsRepository
 from utils import utc_now
 
 
@@ -66,33 +64,14 @@ class GroupRepository(BaseRepository[Group]):
         self.session.refresh(group)
         return group
 
-    def delete_group(self, group_id: int) -> list[str] | None:
-        """Delete a group and memberships unless students would be orphaned."""
+    def delete_group(self, group_id: int) -> None:
+        """Delete a group and its memberships."""
         group = self.get_by_id(group_id)
         if not group:
-            return None
-
-        candidate_students = {
-            user_id
-            for user_id, in (
-                self.session.query(UserGroups.user_id)
-                .join(User, User.id == UserGroups.user_id)
-                .filter(
-                    UserGroups.group_id == group_id,
-                    User.role.has(name="student"),
-                )
-                .all()
-            )
-        }
-        orphaned_students = UserGroupsRepository(
-            self.session
-        ).list_students_with_only_membership(candidate_students)
-        if orphaned_students:
-            return orphaned_students
+            return
 
         self.session.query(UserGroups).filter(UserGroups.group_id == group_id).delete(
             synchronize_session=False
         )
         self.session.delete(group)
         self.session.commit()
-        return []

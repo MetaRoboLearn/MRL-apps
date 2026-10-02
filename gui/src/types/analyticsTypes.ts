@@ -1,6 +1,7 @@
 export type AnalyticsFilters = {
   groupIds: number[]
   activityIds: number[]
+  includeUnassigned: boolean
 }
 
 export type SummaryMetric = {

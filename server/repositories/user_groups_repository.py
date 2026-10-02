@@ -1,6 +1,5 @@
 from typing import Iterable
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from models.user import User
@@ -73,46 +72,3 @@ class UserGroupsRepository(BaseRepository[UserGroups]):
         if commit:
             self.session.commit()
         return membership
-
-    def list_students_with_only_membership(self, user_ids: set[int]) -> list[str]:
-        """Return usernames for candidate students whose total group count is exactly one."""
-        if not user_ids:
-            return []
-
-        membership_counts = (
-            self.session.query(
-                UserGroups.user_id.label("user_id"),
-                func.count(UserGroups.id).label("membership_count"),
-            )
-            .filter(UserGroups.user_id.in_(user_ids))
-            .group_by(UserGroups.user_id)
-            .subquery()
-        )
-        return [
-            username
-            for username, in (
-                self.session.query(User.username)
-                .join(membership_counts, membership_counts.c.user_id == User.id)
-                .filter(
-                    User.id.in_(user_ids),
-                    User.role.has(name="student"),
-                    membership_counts.c.membership_count == 1,
-                )
-                .all()
-            )
-        ]
-
-    def students_orphaned_by_replacement(
-        self,
-        group_id: int,
-        requested_ids: set[int],
-    ) -> list[str]:
-        """Return usernames for students orphaned by the proposed replacement."""
-        current_ids = {
-            user_id
-            for (user_id,) in self.session.query(UserGroups.user_id)
-            .filter(UserGroups.group_id == group_id)
-            .all()
-        }
-        removed_ids = current_ids - requested_ids
-        return self.list_students_with_only_membership(removed_ids)

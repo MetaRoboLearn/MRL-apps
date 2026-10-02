@@ -35,6 +35,7 @@ const ids = z.preprocess((value) => {
 const studentSearchSchema = z.object({
   group_ids: ids.default([]),
   activity_ids: ids.default([]),
+  include_unassigned: z.preprocess((value) => value === true || value === 'true', z.boolean()).optional().default(false),
 })
 
 export const Route = createFileRoute('/admin/analytics/student/$studentId/')({
@@ -47,8 +48,8 @@ function RouteComponent() {
   const search = Route.useSearch()
   const queryClient = useQueryClient()
   const numericStudentId = Number(studentId)
-  const filters: AnalyticsFilters = useMemo(() => ({ groupIds: search.group_ids, activityIds: search.activity_ids }), [search.activity_ids, search.group_ids])
-  const hasValidFilters = filters.groupIds.length > 0 && filters.activityIds.length > 0
+  const filters: AnalyticsFilters = useMemo(() => ({ groupIds: search.group_ids, activityIds: search.activity_ids, includeUnassigned: search.include_unassigned }), [search.activity_ids, search.group_ids, search.include_unassigned])
+  const hasValidFilters = (filters.groupIds.length > 0 || filters.includeUnassigned) && filters.activityIds.length > 0
   const portfolioQuery = useQuery({
     queryKey: ['student-portfolio', numericStudentId, filters],
     queryFn: () => getStudentPortfolio(numericStudentId, filters),
@@ -73,7 +74,7 @@ function RouteComponent() {
 
   if (portfolioQuery.isLoading) return <main className="p-6">Loading portfolio...</main>
   if (portfolioQuery.error) return <main className="p-6 text-red-600">{portfolioQuery.error.message}</main>
-  if (!hasValidFilters) return <main className="p-6 text-red-600">This portfolio link is missing valid group and activity filters. Return to Group analytics and use View Card again.</main>
+  if (!hasValidFilters) return <main className="p-6 text-red-600">Veza nema valjane filtre grupa i aktivnosti. Vratite se na analitiku i ponovno otvorite karticu učenika.</main>
   if (!portfolioQuery.data) return <main className="p-6">No portfolio data was returned.</main>
 
   const portfolio = portfolioQuery.data

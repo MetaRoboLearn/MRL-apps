@@ -75,18 +75,25 @@ def list_users():
         return jsonify({"error": str(e)}), 400
 
     search = request.args.get("search")
+    group_assignment = request.args.get("group_assignment")
+    if group_assignment not in (None, "assigned", "unassigned"):
+        return jsonify({"error": "group_assignment must be assigned or unassigned"}), 400
 
     with db_session() as session:
         repo = UserRepository(session)
-        users = repo.list(
+        users = repo.list_with_assignment_status(
             skip=skip,
             limit=limit,
             role_id=role_id,
             active_only=active_only,
             search=search,
             order_by_username=order_by_username,
+            group_assignment=group_assignment,
         )
-        return jsonify([_user_to_dict(u) for u in users]), 200
+        return jsonify([
+            {**_user_to_dict(user), "is_unassigned": is_unassigned}
+            for user, is_unassigned in users
+        ]), 200
 
 
 # ---------- CREATE ----------
@@ -106,9 +113,6 @@ def create_user():
             return jsonify({"error": "Role not found"}), 404
 
         initial_group_id = data.get("initial_group_id")
-        if role.name == "student" and initial_group_id is None:
-            return jsonify({"error": "initial_group_id is required for students"}), 400
-
         initial_group = None
         if initial_group_id is not None:
             try:

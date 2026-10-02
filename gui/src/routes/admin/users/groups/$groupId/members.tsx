@@ -51,6 +51,7 @@ function RouteComponent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group', groupId] })
       queryClient.invalidateQueries({ queryKey: ['groups'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
       navigate({ to: '/admin/users/groups/$groupId', params: { groupId } })
     },
   })

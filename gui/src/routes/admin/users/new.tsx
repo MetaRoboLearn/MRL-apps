@@ -1,5 +1,5 @@
 import {createFileRoute, useNavigate} from '@tanstack/react-router'
-import { queryOptions, useSuspenseQuery, useMutation } from '@tanstack/react-query'
+import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import {UserForm} from "../../../components/User/UserForm.tsx";
 import {createUser} from "../../../api/usersApi.ts";
@@ -29,6 +29,7 @@ export const Route = createFileRoute('/admin/users/new')({
 
 function RouteComponent() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data: roles } = useSuspenseQuery(rolesQueryOptions)
   const { data: groups } = useSuspenseQuery(groupsQueryOptions)
   const [error, setError] = useState<string>()
@@ -36,6 +37,7 @@ function RouteComponent() {
   const mutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
       navigate({ to: '/admin/users' })
     },
     onError: (err: Error) => {

@@ -11,6 +11,7 @@ from models import User
 from repositories.activity_repository import ActivityRepository
 from repositories.analytics_repository import AnalyticsRepository
 from repositories.group_repository import GroupRepository
+from utils import parse_boolean_param
 
 bp = Blueprint("analytics", __name__, url_prefix="/api/analytics")
 
@@ -40,6 +41,7 @@ def _filters_from_query() -> DatasetFilters:
     return DatasetFilters(
         group_ids=_query_ids("group_ids"),
         activity_ids=_query_ids("activity_ids"),
+        include_unassigned=parse_boolean_param(request.args.get("include_unassigned")) or False,
     )
 
 

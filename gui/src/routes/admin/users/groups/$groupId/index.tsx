@@ -44,6 +44,7 @@ function RouteComponent() {
     mutationFn: () => deleteGroup(groupId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
+      queryClient.invalidateQueries({ queryKey: ['users'] })
       navigate({ to: '/admin/users/groups' })
     },
     onError: (mutationError: GroupMutationError) => {

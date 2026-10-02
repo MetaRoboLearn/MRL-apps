@@ -117,11 +117,6 @@ def delete_group(group_id: int):
         if not owns_group(current_user, group):
             return jsonify({"error": "You do not have access to this group"}), 403
 
-        orphaned_students = group_repo.delete_group(group_id)
-        if orphaned_students:
-            return jsonify({
-                "error": "Cannot delete group because it would leave students without a group",
-                "usernames": orphaned_students,
-            }), 409
+        group_repo.delete_group(group_id)
 
         return jsonify({"success": True}), 200

@@ -24,6 +24,7 @@ export type User = {
   created_by: number | null
   updated_by: number | null
   last_login: string | null
+  is_unassigned?: boolean
 }
 
 export type UserBasic = {
@@ -38,7 +39,7 @@ export type CreateUserRequest = {
   first_name: string
   last_name: string
   role_id: number
-  initial_group_id?: number
+  initial_group_id?: number | null
 }
 
 export type UpdateUserRequest = {
