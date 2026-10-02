@@ -16,6 +16,7 @@ from analytics.visualisation_algorithm import (
     generate_duration_boxplot,
     generate_heatmap,
     generate_summary_metrics,
+    generate_student_summary_table,
     generate_task_summary_table,
 )
 from analytics.session_outcomes import SESSION_OUTCOMES
@@ -81,6 +82,7 @@ def generate_group_analytics(session, filters: DatasetFilters) -> dict[str, Any]
     )
     return {
         "summary_table": generate_summary_metrics(summaries),
+        "student_summary_table": generate_student_summary_table(summaries),
         "task_summary_table": generate_task_summary_table(processed, summaries),
         "heatmap_png": _as_data_uri(generate_heatmap(processed)),
         "boxplot_png": _as_data_uri(generate_duration_boxplot(processed)),

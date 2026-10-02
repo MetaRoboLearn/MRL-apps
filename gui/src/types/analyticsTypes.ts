@@ -11,10 +11,18 @@ export type SummaryMetric = {
 
 export type GroupAnalyticsResponse = {
   summary_table: SummaryMetric[]
+  student_summary_table: StudentAnalyticsMetric[]
   task_summary_table: TaskSummaryRow[]
   heatmap_png: string
   boxplot_png: string
   student_ids: number[]
+}
+
+export type StudentAnalyticsMetric = {
+  student_id: number
+  total_attempt_count: number
+  total_duration_seconds: number
+  success_rate_percent: number
 }
 
 export type TaskSummaryRow = {
@@ -88,6 +96,7 @@ export type BadgeAssignment = {
 }
 
 export type TaskCard = {
+  user_started_task_id: number
   activity_task_id: number
   task_id: number
   activity_title?: string | null

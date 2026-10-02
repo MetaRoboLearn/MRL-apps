@@ -9,6 +9,7 @@ import { getUsersByIds } from '../../../api/usersApi.ts'
 import { AnalyticsImageViewer } from '../../../components/Analytics/AnalyticsImageViewer.tsx'
 import { MultiSelectOption, SearchableMultiSelect } from '../../../components/Analytics/SearchableMultiSelect.tsx'
 import { GroupAnalyticsResponse } from '../../../types/analyticsTypes.ts'
+import { formatDuration } from '../../../utils.ts'
 
 const analyticsSearchSchema = z.object({
   group_ids: z.array(z.number()).optional().default([]),
@@ -17,6 +18,8 @@ const analyticsSearchSchema = z.object({
 })
 
 type GroupSelectionId = number | 'unassigned'
+type StudentSortField = 'last_name' | 'attempts' | 'duration' | 'success_rate'
+type SortDirection = 'asc' | 'desc'
 
 export const Route = createFileRoute('/admin/analytics/')({
   validateSearch: analyticsSearchSchema,
@@ -30,6 +33,8 @@ function RouteComponent() {
     ...(search.include_unassigned ? ['unassigned' as const] : []),
   ])
   const [activityIds, setActivityIds] = useState(search.activity_ids)
+  const [studentSortField, setStudentSortField] = useState<StudentSortField>('last_name')
+  const [studentSortDirection, setStudentSortDirection] = useState<SortDirection>('asc')
   const [result, setResult] = useState<GroupAnalyticsResponse | null>(null)
   const [appliedFilters, setAppliedFilters] = useState({ groupIds: search.group_ids, activityIds: search.activity_ids, includeUnassigned: search.include_unassigned })
 
@@ -71,12 +76,34 @@ function RouteComponent() {
   const canCreate = groupSelection.length > 0 && activityIds.length > 0 && !analyticsMutation.isPending
   const formatMetric = (value: number | null) => value === null ? '—' : Number(value.toFixed(2)).toString()
   const formatDifficulty = (value: number | null) => value === null ? '—' : `${value}`
+  const studentMetricsById = useMemo(
+    () => new Map((result?.student_summary_table || []).map((metric) => [metric.student_id, metric])),
+    [result?.student_summary_table],
+  )
   const orderedStudents = useMemo(
     () => [...(studentsQuery.data || [])].sort((left, right) => {
-      const lastNameOrder = left.last_name.localeCompare(right.last_name)
-      return lastNameOrder || left.first_name.localeCompare(right.first_name)
+      const leftMetric = studentMetricsById.get(left.id)
+      const rightMetric = studentMetricsById.get(right.id)
+      const direction = studentSortDirection === 'asc' ? 1 : -1
+      let primaryOrder = 0
+
+      if (studentSortField === 'last_name') {
+        primaryOrder = left.last_name.localeCompare(right.last_name) * direction
+      } else {
+        const metricValues = {
+          attempts: [leftMetric?.total_attempt_count ?? 0, rightMetric?.total_attempt_count ?? 0],
+          duration: [leftMetric?.total_duration_seconds ?? 0, rightMetric?.total_duration_seconds ?? 0],
+          success_rate: [leftMetric?.success_rate_percent ?? 0, rightMetric?.success_rate_percent ?? 0],
+        }[studentSortField]
+        primaryOrder = (metricValues[0] - metricValues[1]) * direction
+      }
+
+      return primaryOrder
+        || left.last_name.localeCompare(right.last_name)
+        || left.first_name.localeCompare(right.first_name)
+        || left.id - right.id
     }),
-    [studentsQuery.data],
+    [studentsQuery.data, studentMetricsById, studentSortDirection, studentSortField],
   )
 
   return (
@@ -176,17 +203,36 @@ function RouteComponent() {
               </details>
             </div>
             <details className="rounded-md border border-gray-200 bg-white" open>
-              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Students</summary>
+              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Učenici</summary>
               <div className="overflow-x-auto border-t border-gray-200 p-4">
-              {studentsQuery.isLoading ? <p>Loading students...</p> : studentsQuery.error ? <p className="text-red-600">{studentsQuery.error.message}</p> : (
-                <table className="min-w-full border-collapse text-left text-sm">
-                  <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">First name</th><th className="px-3 py-2">Last name</th><th className="px-3 py-2">Username</th><th className="px-3 py-2" /></tr></thead>
-                  <tbody>{orderedStudents.map((student) => {
-                    const portfolioUrl = `/admin/analytics/student/${student.id}?group_ids=${encodeURIComponent(appliedFilters.groupIds.join(','))}&activity_ids=${encodeURIComponent(appliedFilters.activityIds.join(','))}&include_unassigned=${appliedFilters.includeUnassigned}`
-                    return <tr key={student.id} className="border-b border-gray-100"><td className="px-3 py-2">{student.first_name}</td><td className="px-3 py-2">{student.last_name}</td><td className="px-3 py-2">@{student.username}</td><td className="px-3 py-2"><a className="text-blue-600 hover:underline" href={portfolioUrl} target="_blank" rel="noreferrer">View Card</a></td></tr>
-                  })}</tbody>
-                </table>
-              )}
+                <div className="mb-4 flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <span>Poredaj prema</span>
+                    <select value={studentSortField} onChange={(event) => setStudentSortField(event.target.value as StudentSortField)} className="min-h-10 rounded-md border border-gray-300 bg-white px-3">
+                      <option value="last_name">Prezime</option>
+                      <option value="attempts">Broj pokretanja</option>
+                      <option value="duration">Ukupno vrijeme</option>
+                      <option value="success_rate">Uspješnost</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <span>Redoslijed</span>
+                    <select value={studentSortDirection} onChange={(event) => setStudentSortDirection(event.target.value as SortDirection)} className="min-h-10 rounded-md border border-gray-300 bg-white px-3">
+                      <option value="asc">Uzlazno</option>
+                      <option value="desc">Silazno</option>
+                    </select>
+                  </label>
+                </div>
+                {studentsQuery.isLoading ? <p>Učitavanje učenika...</p> : studentsQuery.error ? <p className="text-red-600">{studentsQuery.error.message}</p> : orderedStudents.length === 0 ? <p className="text-gray-500">Nema učenika za odabrane filtre.</p> : (
+                  <table className="min-w-full border-collapse text-left text-sm">
+                    <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">Ime</th><th className="px-3 py-2">Prezime</th><th className="px-3 py-2">Broj pokretanja</th><th className="px-3 py-2">Ukupno vrijeme</th><th className="px-3 py-2">Uspješnost</th><th className="px-3 py-2" /></tr></thead>
+                    <tbody>{orderedStudents.map((student) => {
+                      const metric = studentMetricsById.get(student.id)
+                      const portfolioUrl = `/admin/analytics/student/${student.id}?group_ids=${encodeURIComponent(appliedFilters.groupIds.join(','))}&activity_ids=${encodeURIComponent(appliedFilters.activityIds.join(','))}&include_unassigned=${appliedFilters.includeUnassigned}`
+                      return <tr key={student.id} className="border-b border-gray-100"><td className="px-3 py-2">{student.first_name}</td><td className="px-3 py-2">{student.last_name}</td><td className="px-3 py-2">{metric?.total_attempt_count ?? '—'}</td><td className="px-3 py-2">{metric ? formatDuration(metric.total_duration_seconds) : '—'}</td><td className="px-3 py-2">{metric ? `${formatMetric(metric.success_rate_percent)}%` : '—'}</td><td className="px-3 py-2"><a className="text-blue-600 hover:underline" href={portfolioUrl} target="_blank" rel="noreferrer">Otvori karticu</a></td></tr>
+                    })}</tbody>
+                  </table>
+                )}
               </div>
             </details>
           </div>

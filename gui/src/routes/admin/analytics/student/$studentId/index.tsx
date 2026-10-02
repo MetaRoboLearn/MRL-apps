@@ -7,6 +7,7 @@ import { assignBadge, removeBadge, updateBadgeComment } from '../../../../../api
 import { StudentTaskCard } from '../../../../../components/Analytics/StudentTaskCard.tsx'
 import { getUsersByIds } from '../../../../../api/usersApi.ts'
 import { AnalyticsFilters, TaskCard } from '../../../../../types/analyticsTypes.ts'
+import { formatDuration } from '../../../../../utils.ts'
 
 const ids = z.preprocess((value) => {
   const values = Array.isArray(value) ? value : [value]
@@ -91,15 +92,15 @@ function RouteComponent() {
           <h1 className="text-3xl font-bold text-gray-900">{student ? `${student.first_name} ${student.last_name}` : `Student #${portfolio.student_id}`}</h1>
           {student && <p className="mt-1 text-gray-500">@{student.username}</p>}
           <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div><dt className="text-sm text-gray-500">Tasks attempted</dt><dd className="text-2xl font-semibold">{attempted}</dd></div>
-            <div><dt className="text-sm text-gray-500">Tasks completed</dt><dd className="text-2xl font-semibold">{completed}</dd></div>
-            <div><dt className="text-sm text-gray-500">Total time</dt><dd className="text-2xl font-semibold">{totalTime}s</dd></div>
+            <div><dt className="text-sm text-gray-500">Pokušani zadaci</dt><dd className="text-2xl font-semibold">{attempted}</dd></div>
+            <div><dt className="text-sm text-gray-500">Dovršeni zadaci</dt><dd className="text-2xl font-semibold">{completed}</dd></div>
+            <div><dt className="text-sm text-gray-500">Ukupno vrijeme</dt><dd className="text-2xl font-semibold">{formatDuration(totalTime)}</dd></div>
           </dl>
         </header>
         <div className="space-y-5">
-          {portfolio.task_cards.length === 0 ? <section className="rounded-md border border-gray-200 bg-white p-6 text-gray-500">No task results found for this selection.</section> : portfolio.task_cards.map((card) => (
+          {portfolio.task_cards.length === 0 ? <section className="rounded-md border border-gray-200 bg-white p-6 text-gray-500">Nema rezultata za odabrane filtre.</section> : portfolio.task_cards.map((card) => (
             <StudentTaskCard
-              key={card.activity_task_id}
+              key={card.user_started_task_id}
               card={card}
               isMutating={mutation.isPending}
               isSuggesting={suggestionMutation.isPending && suggestionMutation.variables?.card.activity_task_id === card.activity_task_id}

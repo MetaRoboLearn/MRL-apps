@@ -8,6 +8,7 @@ type CodeAnalysisViewerProps = {
   analysis: CodeAnalysis
   template?: string | null
   expanded?: boolean
+  visible?: boolean
 }
 
 // TODO: Making the legend configurable in the future could be useful
@@ -71,7 +72,7 @@ const getTemplateLineIndexes = (code: string, template: string | null | undefine
   return templateLineIndexes
 }
 
-export function CodeAnalysisViewer({ code, analysis, template, expanded = false }: CodeAnalysisViewerProps) {
+export function CodeAnalysisViewer({ code, analysis, template, expanded = false, visible = true }: CodeAnalysisViewerProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
   const styleDecorationsRef = useRef<string[]>([])
   const highlightDecorationsRef = useRef<string[]>([])
@@ -112,6 +113,13 @@ export function CodeAnalysisViewer({ code, analysis, template, expanded = false 
       styleDecorationsRef.current = editor.deltaDecorations(styleDecorationsRef.current, [])
     }
   }, [code, editorReady, templateLineIndexes])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || !editorReady || !visible) return
+    const frame = window.requestAnimationFrame(() => editor.layout())
+    return () => window.cancelAnimationFrame(frame)
+  }, [editorReady, visible])
 
   useEffect(() => {
     const editor = editorRef.current
@@ -158,7 +166,7 @@ export function CodeAnalysisViewer({ code, analysis, template, expanded = false 
           options={{ readOnly: true, minimap: { enabled: false }, wordWrap: 'on', padding: { top: 12 } }}
         />
       </div>
-      <aside className={`min-h-0 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3 text-sm ${expanded ? 'max-h-[45vh] lg:h-[32rem]' : 'h-80'}`}>
+      <aside className={`min-h-0 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3 text-sm ${expanded ? 'h-[45vh] min-h-80 lg:h-[32rem]' : 'h-80'}`}>
         <h3 className="mb-3 font-semibold text-gray-700">Pronađeni elementi</h3>
         <div className="space-y-2">
         <label className="flex items-center gap-1">

@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 OUTCOME_RANK = {
     "Success_both": 5,
-    "Success_robot": 5,
-    "Success_sim": 4,
-    "Success": 4,
+    "Success_robot": 4,
+    "Success_sim": 3,
+    "Success": 3,
     "Abandoned": 2,
     "Fail": 1,
 }
@@ -99,16 +99,17 @@ def generate_heatmap(dataframe: pd.DataFrame) -> bytes:
     figure_width = max(8, min(30, 2 + matrix.shape[1] * 1.5))
     figure_height = max(4, min(24, 2 + matrix.shape[0] * 0.35))
     plt.figure(figsize=(figure_width, figure_height))
-    cmap = ListedColormap(["#f0f0f0", "#e74c3c", "#ff9800", "#b0b0b0", "#3498db", "#2ecc71"])
+    cmap = ListedColormap(["#f0f0f0", "#e74c3c", "#ff9800", "#2ecc71", "#3498db", "#14b8a6"])
     norm = BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5], cmap.N)
     image = plt.imshow(matrix.to_numpy(), cmap=cmap, norm=norm, aspect="auto")
-    colorbar = plt.colorbar(image, ticks=[0, 1, 2, 4, 5], label="Status")
+    colorbar = plt.colorbar(image, ticks=[0, 1, 2, 3, 4, 5], label="Ishod")
     colorbar.ax.set_yticklabels([
-        "No attempt",
-        "Fail",
-        "Abandoned",
-        "Success (simulation)",
-        "Success (robot/both)",
+        "Bez pokušaja",
+        "Neuspješno",
+        "Prekinuto",
+        "Uspjeh u simulatoru",
+        "Uspjeh s robotom",
+        "Uspjeh simulatorom i robotom",
     ])
     plt.xticks(np.arange(matrix.shape[1]), list(matrix.columns), rotation=45, ha="right")
     student_labels = values.drop_duplicates("_student").set_index("_student")["_student_label"]
@@ -214,26 +215,31 @@ def generate_trajectory(
         label = task_data["_task_label"].iloc[0]
         plt.plot(task_data["timestamp"], task_data["code_complexity"], label=label, alpha=0.75)
 
-    robot_successes = data[data["session_outcome"].isin(["Success_robot", "Success_both"])]
+    robot_successes = data[data["session_outcome"] == "Success_robot"]
     sim_successes = data[data["session_outcome"].isin(["Success_sim", "Success"])]
+    both_successes = data[data["session_outcome"] == "Success_both"]
     completion_values = data.get("is_task_completion", pd.Series(False, index=data.index))
     completions = data[completion_values.fillna(False).astype(bool)]
     failures = data[data["session_outcome"] == "Fail"]
     abandoned = data[data["session_outcome"] == "Abandoned"]
     plt.scatter(
         robot_successes["timestamp"], robot_successes["code_complexity"],
-        c="darkgreen", s=250, marker="*", label="Robot Success", zorder=10,
+        c="#3498db", s=250, marker="*", label="Uspjeh s robotom", zorder=10,
     )
     plt.scatter(
         sim_successes["timestamp"], sim_successes["code_complexity"],
-        c="limegreen", s=200, marker="*", label="Simulation Success", zorder=10,
+        c="#2ecc71", s=200, marker="*", label="Uspjeh u simulatoru", zorder=10,
+    )
+    plt.scatter(
+        both_successes["timestamp"], both_successes["code_complexity"],
+        c="#14b8a6", s=275, marker="*", label="Uspjeh simulatorom i robotom", zorder=11,
     )
     plt.scatter(
         completions["timestamp"], completions["code_complexity"],
-        c="green", s=120, marker="o", edgecolors="black", alpha=0.6, label="Completion",
+        facecolors="none", s=120, marker="o", edgecolors="black", alpha=0.6, label="Dovršen zadatak",
     )
-    plt.scatter(failures["timestamp"], failures["code_complexity"], marker="x", c="red", label="Failed Attempt")
-    plt.scatter(abandoned["timestamp"], abandoned["code_complexity"], marker="v", c="orange", label="Abandoned")
+    plt.scatter(failures["timestamp"], failures["code_complexity"], marker="x", c="red", label="Neuspješan pokušaj")
+    plt.scatter(abandoned["timestamp"], abandoned["code_complexity"], marker="v", c="orange", label="Prekinut pokušaj")
     usernames = data.get("username", pd.Series(dtype=object)).dropna().astype(str).str.strip()
     display_name = usernames.iloc[0] if not usernames.empty else str(user_id)
     plt.xlabel("Timeline")
@@ -260,6 +266,32 @@ def generate_summary_metrics(summaries: pd.DataFrame) -> list[dict[str, Any]]:
         {"metric_name": "failed_sessions", "value": int((statuses == "Fail").sum())},
         {"metric_name": "abandoned_sessions", "value": int((statuses == "Abandoned").sum())},
     ]
+
+
+def generate_student_summary_table(summaries: pd.DataFrame) -> list[dict[str, Any]]:
+    """Return per-student attempts, duration, and distinct-task success rate."""
+    if summaries.empty:
+        return []
+
+    rows = []
+    for student_id, student_summaries in summaries.groupby("user_id", sort=True):
+        attempted_tasks = student_summaries["activity_task_id"].dropna().unique()
+        successful_tasks = student_summaries.loc[
+            student_summaries["status"].astype(str).str.startswith("Success"),
+            "activity_task_id",
+        ].dropna().unique()
+        total_duration = pd.to_numeric(student_summaries["duration_seconds"], errors="coerce").fillna(0).sum()
+        total_attempts = pd.to_numeric(student_summaries["attempt_count"], errors="coerce").fillna(0).sum()
+
+        rows.append({
+            "student_id": int(student_id),
+            "total_attempt_count": int(total_attempts),
+            "total_duration_seconds": _json_value(total_duration),
+            "success_rate_percent": round(len(successful_tasks) / len(attempted_tasks) * 100, 2)
+            if len(attempted_tasks)
+            else 0,
+        })
+    return rows
 
 
 def generate_task_summary_table(processed: pd.DataFrame, summaries: pd.DataFrame) -> list[dict[str, Any]]:
@@ -347,6 +379,7 @@ def build_student_portfolio_data(
             "max": float(complexity.max()) if not complexity.empty else 0.0,
         }
         cards.append({
+            "user_started_task_id": _json_value(summary["user_started_task_id"]),
             "activity_task_id": task_id,
             "task_id": _json_value(summary["task_id"]),
             "activity_title": _json_value(summary["activity_title"]),

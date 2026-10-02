@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { formatLocalDateTime } from '../../utils.ts'
+import { useEffect, useState } from 'react'
+import { formatDuration, formatLocalDateTime } from '../../utils.ts'
 import { CodeAnalysisViewer } from './CodeAnalysisViewer.tsx'
 import { TaskCard } from '../../types/analyticsTypes.ts'
 
@@ -14,10 +14,19 @@ type StudentTaskCardProps = {
   isSuggestionPending: boolean
 }
 
-const statusLabel = (status: string) => status.replace(/_/g, ' ')
+const statusLabel = (status: string) => ({
+  Success_sim: 'Uspjeh u simulatoru',
+  Success_robot: 'Uspjeh s robotom',
+  Success_both: 'Uspjeh simulatorom i robotom',
+  Success: 'Uspješno',
+  Fail: 'Neuspješno',
+  Abandoned: 'Prekinuto',
+}[status] || status.replace(/_/g, ' '))
 
 const statusClasses = (status: string) => {
-  if (status.startsWith('Success')) return 'bg-emerald-100 text-emerald-800 ring-emerald-200'
+  if (status === 'Success_sim' || status === 'Success') return 'bg-emerald-100 text-emerald-800 ring-emerald-200'
+  if (status === 'Success_robot') return 'bg-blue-100 text-blue-800 ring-blue-200'
+  if (status === 'Success_both') return 'bg-teal-100 text-teal-800 ring-teal-200'
   if (status === 'Fail') return 'bg-red-100 text-red-800 ring-red-200'
   if (status === 'Abandoned') return 'bg-amber-100 text-amber-800 ring-amber-200'
   return 'bg-gray-100 text-gray-700 ring-gray-200'
@@ -25,7 +34,12 @@ const statusClasses = (status: string) => {
 
 export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSuggest, isMutating, isSuggesting, isSuggestionPending }: StudentTaskCardProps) {
   const [comment, setComment] = useState(card.badge?.comment || '')
+  const [codeExpanded, setCodeExpanded] = useState(false)
   const isAssigned = Boolean(card.badge)
+
+  useEffect(() => {
+    setComment(card.badge?.comment || '')
+  }, [card.badge?.comment, card.badge?.user_badge_id])
 
   return (
     <article className="rounded-md border border-gray-200 bg-white p-5 shadow-sm">
@@ -38,18 +52,20 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
       </div>
 
       <dl className="mb-5 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
-        <div><dt className="text-gray-500">Time spent</dt><dd className="font-medium">{card.time_spent_seconds}s</dd></div>
-        <div><dt className="text-gray-500">Attempts</dt><dd className="font-medium">{card.attempt_count}</dd></div>
+        <div><dt className="text-gray-500">Utrošeno vrijeme</dt><dd className="font-medium">{formatDuration(card.time_spent_seconds)}</dd></div>
+        <div><dt className="text-gray-500">Broj pokretanja</dt><dd className="font-medium">{card.attempt_count}</dd></div>
         <div><dt className="text-gray-500">Difficulty</dt><dd className="font-medium">{card.task_difficulty ?? '—'}</dd></div>
         <div><dt className="text-gray-500">Attempted</dt><dd className="font-medium">{card.attempt_date ? formatLocalDateTime(card.attempt_date) : '—'}</dd></div>
       </dl>
 
-      <div className="mb-5 border-y border-gray-200 py-5">
-        <h3 className="mb-3 font-semibold text-gray-800">Learning trajectory</h3>
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
-          <img src={card.trajectory_png} alt={`Learning trajectory for ${card.title || 'task'}`} className="mx-auto block h-auto w-full object-contain" />
+      <details className="mb-5 border-y border-gray-200 py-5">
+        <summary className="cursor-pointer font-semibold text-gray-800">Learning trajectory</summary>
+        <div className="pt-3">
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
+            <img src={card.trajectory_png} alt={`Learning trajectory for ${card.title || 'task'}`} className="mx-auto block h-auto w-full object-contain" />
+          </div>
         </div>
-      </div>
+      </details>
 
       <div className="mb-5 rounded-md bg-gray-50 p-4 text-sm">
         <h3 className="mb-2 font-semibold text-gray-800">Broj linija</h3>
@@ -60,10 +76,12 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
         </div>
       </div>
 
-      <div className="mb-5 border-b border-gray-200 pb-5">
-        <h3 className="mb-3 font-semibold text-gray-800">Submitted code</h3>
-        <CodeAnalysisViewer code={card.final_code || ''} analysis={card.code_analysis} template={card.code_template} />
-      </div>
+      <details className="mb-5 border-b border-gray-200 pb-5" onToggle={(event) => setCodeExpanded(event.currentTarget.open)}>
+        <summary className="cursor-pointer font-semibold text-gray-800">Predani kod</summary>
+        <div className="pt-3">
+          <CodeAnalysisViewer code={card.final_code || ''} analysis={card.code_analysis} template={card.code_template} expanded visible={codeExpanded} />
+        </div>
+      </details>
 
       <section className="border-t border-gray-200 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
@@ -89,7 +107,6 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
             </div>
           </div>
         )}
-        {card.badge?.comment && <p className="mt-3 text-sm italic text-gray-600">Current comment: “{card.badge.comment}”</p>}
       </section>
     </article>
   )
