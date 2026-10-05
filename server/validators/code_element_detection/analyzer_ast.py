@@ -304,7 +304,20 @@ def analyze_code(code: str, config_path: Optional[str] = None) -> dict:
         tree = ast.parse(code)
     except SyntaxError as e:
         logger.warning("AST code analysis found syntax error at line %s", e.lineno)
-        return {"error": str(e), "code_elements": [], "stats": {}}
+        syntax_error = {
+            "message": e.msg,
+            "lineno": e.lineno,
+            "end_lineno": e.end_lineno or e.lineno,
+            "col_offset": max(0, (e.offset or 1) - 1),
+            "end_col_offset": max(0, (e.end_offset or e.offset or 1) - 1),
+            "source_line": (e.text or "").rstrip("\r\n"),
+        }
+        return {
+            "error": str(e),
+            "syntax_error": syntax_error,
+            "code_elements": [],
+            "stats": {},
+        }
         
     visitor = CodeAnalyzerVisitor(code_lines, config)
     # Pass 1: Pre-scan for all variable definitions to handle globals used in functions

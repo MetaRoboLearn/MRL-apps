@@ -67,6 +67,27 @@ def _build_reduced_task_status(task_status: str, activity_available: bool) -> st
     return "Fail"  # return by default
 
 
+def _student_task_analysis(task_analysis: Any) -> dict[str, Any] | None:
+    """Return configured findings without teacher-only ordering weights or score."""
+    if not isinstance(task_analysis, dict):
+        return None
+    return {
+        "syntax_valid": task_analysis.get("syntax_valid"),
+        "detection_method": task_analysis.get("detection_method"),
+        "syntax_error": task_analysis.get("syntax_error"),
+        "expected_elements": [
+            {
+                "element_id": element.get("element_id"),
+                "name": element.get("name"),
+                "count": element.get("count", 0),
+                "status": element.get("status"),
+                "evidence": element.get("evidence", []),
+            }
+            for element in task_analysis.get("expected_elements", [])
+        ],
+    }
+
+
 def generate_group_analytics(session, filters: DatasetFilters) -> dict[str, Any]:
     """Generate metrics and plots for all selected groups as one cohort."""
     logger.info(
@@ -150,7 +171,7 @@ def build_reduced_submissions(
             "attempt_count": _json_value(summary["attempt_count"]),
             "duration_seconds": _json_value(summary["duration_seconds"]),
             "final_code": _json_value(summary["final_code"]),
-            "code_analysis": _json_value(summary["code_analysis"]),
+            "task_analysis": _student_task_analysis(summary.get("task_analysis")),
             "badge": badge_state.get(task_id),
         })
     return submissions

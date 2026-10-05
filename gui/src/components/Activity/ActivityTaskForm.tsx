@@ -10,6 +10,9 @@ import {
 import { getTasksPreview } from '../../api/tasksApi.ts'
 import { TaskType } from '../../api/typesApi.ts'
 import { TaskPreview } from '../../types/tasksTypes.ts'
+import { ProgrammingElementOption } from '../../types/activityTypes.ts'
+import { getProgrammingElements } from '../../api/programmingElementsApi.ts'
+import { ProgrammingElementSelector } from './ProgrammingElementSelector.tsx'
 import {RichTextEditor} from "../UI/RichTextEditor.tsx";
 
 const tasksQueryOptions = (search: string) =>
@@ -27,6 +30,7 @@ type ActivityTaskFormData = {
   is_logged: boolean;
   allows_robot: boolean;
   difficulty: number | null;
+  programming_element_ids: string[];
 }
 
 type ActivityTaskFormProps = {
@@ -39,6 +43,10 @@ type ActivityTaskFormProps = {
 }
 
 const columnHelper = createColumnHelper<TaskPreview>()
+const programmingElementsQueryOptions = queryOptions({
+  queryKey: ['programming-elements'],
+  queryFn: getProgrammingElements,
+})
 
 function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
   const [search, setSearch] = useState('')
@@ -132,6 +140,7 @@ function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
 
 export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, error, cancelTo }: ActivityTaskFormProps) {
   const navigate = useNavigate()
+  const { data: programmingElements } = useSuspenseQuery(programmingElementsQueryOptions)
   const isEditing = !!initialData
 
   const [formData, setFormData] = useState<ActivityTaskFormData>(initialData || {
@@ -143,6 +152,7 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
     is_logged: true,
     allows_robot: true,
     difficulty: null,
+    programming_element_ids: [],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showPicker, setShowPicker] = useState(!initialData)
@@ -167,6 +177,9 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
       setErrors((prev) => { const next = { ...prev }; delete next.task_id; return next })
     }
   }
+
+  const selectedType = types.find((type) => type.id === formData.type_id)
+  const isPythonTask = selectedType?.name.toLowerCase() === 'python'
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -204,7 +217,15 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
           <label className="block text-sm font-medium mb-1">Type *</label>
           <select
             value={formData.type_id}
-            onChange={(e) => setFormData((prev) => ({ ...prev, type_id: Number(e.target.value) }))}
+            onChange={(e) => {
+              const typeId = Number(e.target.value)
+              const nextType = types.find((type) => type.id === typeId)
+              setFormData((prev) => ({
+                ...prev,
+                type_id: typeId,
+                programming_element_ids: nextType?.name.toLowerCase() === 'python' ? prev.programming_element_ids : [],
+              }))
+            }}
             className={`w-full px-3 py-2 border rounded-md ${errors.type_id ? 'border-red-500' : 'border-gray-300'}`}
           >
             {types.map((t) => (
@@ -216,7 +237,7 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
 
         {/* Difficulty */}
         <div>
-          <label className="block text-sm font-medium mb-1">Težina</label>
+          <label className="block text-sm font-medium mb-1">Razina strukture</label>
           <select
             value={formData.difficulty ?? ''}
             onChange={(e) => setFormData((prev) => ({ ...prev, difficulty: e.target.value ? Number(e.target.value) : null }))}
@@ -228,6 +249,14 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
             <option value="3">★★★ (3)</option>
           </select>
         </div>
+
+        {isPythonTask && (
+          <ProgrammingElementSelector
+            elements={programmingElements as ProgrammingElementOption[]}
+            selectedIds={formData.programming_element_ids}
+            onChange={(programming_element_ids) => setFormData((prev) => ({ ...prev, programming_element_ids }))}
+          />
+        )}
 
         {/* Preview */}
         <div>

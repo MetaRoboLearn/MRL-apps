@@ -4,6 +4,7 @@ import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from '@ta
 import { useState } from 'react'
 import { getActivityTaskById, updateActivityTask } from '../../../../../../api/activitiesApi.ts'
 import { getTypes } from '../../../../../../api/typesApi.ts'
+import { getProgrammingElements } from '../../../../../../api/programmingElementsApi.ts'
 import { ActivityTaskForm } from '../../../../../../components/Activity/ActivityTaskForm.tsx'
 
 const activityTaskQueryOptions = (activityTaskId: string) =>
@@ -17,11 +18,17 @@ const typesQueryOptions = queryOptions({
   queryFn: getTypes,
 })
 
+const programmingElementsQueryOptions = queryOptions({
+  queryKey: ['programming-elements'],
+  queryFn: getProgrammingElements,
+})
+
 export const Route = createFileRoute('/admin/activities/$activityId/tasks/$activityTaskId/edit')({
   loader: ({ context, params }) => {
     return Promise.all([
       context.queryClient.ensureQueryData(activityTaskQueryOptions(params.activityTaskId)),
       context.queryClient.ensureQueryData(typesQueryOptions),
+      context.queryClient.ensureQueryData(programmingElementsQueryOptions),
     ])
   },
   component: RouteComponent,
@@ -47,7 +54,7 @@ function RouteComponent() {
     },
   })
 
-  const handleSubmit = async (data: { task_id: number | null; type_id: number; preview: string; instructions: string; is_logged: boolean; allows_robot: boolean; difficulty: number | null }) => {
+  const handleSubmit = async (data: { task_id: number | null; type_id: number; preview: string; instructions: string; is_logged: boolean; allows_robot: boolean; difficulty: number | null; programming_element_ids: string[] }) => {
     setError(undefined)
     if (!data.task_id) return
 
@@ -60,6 +67,7 @@ function RouteComponent() {
       is_logged: data.is_logged,
       allows_robot: data.allows_robot,
       difficulty: data.difficulty,
+      programming_element_ids: data.programming_element_ids,
     })
   }
 
@@ -76,6 +84,7 @@ function RouteComponent() {
           is_logged: activityTask.is_logged,
           allows_robot: activityTask.allows_robot,
           difficulty: activityTask.difficulty ?? null,
+          programming_element_ids: activityTask.programming_element_ids ?? [],
         }}
         types={types}
         onSubmit={handleSubmit}

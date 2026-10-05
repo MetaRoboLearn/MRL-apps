@@ -41,7 +41,7 @@ export function SubmissionModal({ submission, onClose }: SubmissionModalProps) {
             <dd className="mt-1 font-semibold text-gray-900">{submission.attempt_date ? formatLocalDateTime(submission.attempt_date) : '—'}</dd>
           </div>
         </dl>
-        <CodeAnalysisViewer code={submission.final_code || ''} analysis={submission.code_analysis} expanded />
+        <CodeAnalysisViewer code={submission.final_code || ''} taskAnalysis={submission.task_analysis} expanded showElementStatusTooltip={false} />
         {submission.badge?.comment && (
           <div className="mt-6 rounded-md bg-sunglow-100 p-4">
             <h3 className="font-semibold text-gray-800">Komentar nastavnika</h3>

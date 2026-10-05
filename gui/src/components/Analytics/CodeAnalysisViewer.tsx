@@ -1,39 +1,16 @@
 import Editor, { OnMount } from '@monaco-editor/react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import * as Monaco from 'monaco-editor'
-import { CodeAnalysis, CodeElementRange } from '../../types/analyticsTypes.ts'
+import { TaskAnalysis } from '../../types/analyticsTypes.ts'
+import { ElementStatusTooltip } from './ElementStatusTooltip.tsx'
 
 type CodeAnalysisViewerProps = {
   code: string
-  analysis: CodeAnalysis
+  taskAnalysis: TaskAnalysis | null
   template?: string | null
   expanded?: boolean
   visible?: boolean
-}
-
-// TODO: Making the legend configurable in the future could be useful
-const LEGEND_ELEMENTS = [
-  { type: 'variable_init', label: 'Inicijalizacija varijable' },
-  { type: 'variable_use', label: 'Korištenje varijable' },
-  { type: 'comment', label: 'Komentar' },
-  { type: 'loop', label: 'Petlja' },
-  { type: 'branching', label: 'Grananje' },
-  { type: 'function_def', label: 'Definicija funkcije' },
-  { type: 'builtin_call', label: 'Ugrađeni poziv' },
-  { type: 'detect_object_call', label: 'Prepoznavanje objekata' },
-  { type: 'detect_object_conf_call', label: 'Provjera pouzdanosti prepoznavanja' },
-  { type: 'user_function_call', label: 'Korisnički poziv' },
-  { type: 'list', label: 'Lista' },
-  { type: 'tuple', label: 'N-torka' },
-] as const
-
-const elementCount = (analysis: CodeAnalysis, elementType: string, elements: CodeElementRange[]) => {
-  const countKey = `${elementType}_count`
-  const statsCount = analysis?.stats?.[countKey]
-  const legacyCount = analysis?.counts?.[countKey]
-  if (typeof statsCount === 'number') return statsCount
-  if (typeof legacyCount === 'number') return legacyCount
-  return elements.filter((element) => element.type === elementType).length
+  showElementStatusTooltip?: boolean
 }
 
 const getTemplateLineIndexes = (code: string, template: string | null | undefined) => {
@@ -72,14 +49,32 @@ const getTemplateLineIndexes = (code: string, template: string | null | undefine
   return templateLineIndexes
 }
 
-export function CodeAnalysisViewer({ code, analysis, template, expanded = false, visible = true }: CodeAnalysisViewerProps) {
+export function CodeAnalysisViewer({ code, taskAnalysis, template, expanded = false, visible = true, showElementStatusTooltip = true }: CodeAnalysisViewerProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
   const styleDecorationsRef = useRef<string[]>([])
   const highlightDecorationsRef = useRef<string[]>([])
   const [selectedElement, setSelectedElement] = useState('all')
   const [editorReady, setEditorReady] = useState(false)
   const radioGroup = useId()
-  const elements = useMemo(() => analysis?.code_elements || analysis?.elements || [], [analysis?.code_elements, analysis?.elements])
+  const elements = useMemo(() => taskAnalysis
+    ? taskAnalysis.expected_elements.flatMap((expected) => expected.evidence.map((evidence) => ({
+      type: expected.element_id,
+      lineno: evidence.lineno ?? undefined,
+      end_lineno: evidence.end_lineno ?? undefined,
+      col_offset: evidence.col_offset ?? undefined,
+      end_col_offset: evidence.end_col_offset ?? undefined,
+    })))
+    : [], [taskAnalysis])
+  const legendElements = useMemo(() => taskAnalysis?.expected_elements.map((element) => ({
+    type: element.element_id,
+    label: element.name,
+    count: element.count,
+    status: element.status,
+    issues: [...new Set(element.evidence.flatMap((evidence) => evidence.issues.map((issue) => ({
+      line: evidence.lineno,
+      issue,
+    }))))],
+  })) ?? [], [taskAnalysis])
   const templateLineIndexes = useMemo(
     () => getTemplateLineIndexes(code, template),
     [code, template],
@@ -133,9 +128,9 @@ export function CodeAnalysisViewer({ code, analysis, template, expanded = false,
 
     const highlightRanges = matchingElements.flatMap((element) => {
       // `line` is a source-text excerpt in the analyzer response. Use the numeric AST coordinates.
-      const startLine = element.lineno ?? (typeof element.line === 'number' ? element.line : undefined)
+      const startLine = element.lineno
       if (!startLine || startLine < 1 || startLine > model.getLineCount()) return []
-      const endLineValue = element.end_lineno ?? (typeof element.end_line === 'number' ? element.end_line : startLine)
+      const endLineValue = element.end_lineno ?? startLine
       const endLine = Math.min(model.getLineCount(), Math.max(startLine, endLineValue))
       const startColumn = Math.min(model.getLineMaxColumn(startLine), Math.max(1, (element.col_offset ?? 0) + 1))
       const endColumn = Math.min(model.getLineMaxColumn(endLine), Math.max(startColumn + 1, (element.end_col_offset ?? startColumn) + 1))
@@ -153,6 +148,12 @@ export function CodeAnalysisViewer({ code, analysis, template, expanded = false,
       highlightDecorationsRef.current = editor.deltaDecorations(highlightDecorationsRef.current, [])
     }
   }, [editorReady, elements, selectedElement])
+
+  useEffect(() => {
+    if (selectedElement !== 'all' && !legendElements.some((element) => element.type === selectedElement)) {
+      setSelectedElement('all')
+    }
+  }, [legendElements, selectedElement])
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem]">
@@ -173,21 +174,30 @@ export function CodeAnalysisViewer({ code, analysis, template, expanded = false,
           <input type="radio" name={radioGroup} checked={selectedElement === 'all'} onChange={() => setSelectedElement('all')} />
           Svi elementi
         </label>
-        {LEGEND_ELEMENTS.map(({ type, label }) => (
-          <label key={type} className="flex items-center gap-2">
-            <input type="radio" name={radioGroup} checked={selectedElement === type} onChange={() => setSelectedElement(type)} />
-            <span>{label}</span>
-            <span aria-label={`Broj pronađenih: ${elementCount(analysis, type, elements)}`} className={elementCount(analysis, type, elements) === 0 ? 'font-semibold text-red-600' : 'font-semibold text-emerald-600'}>
-              ({elementCount(analysis, type, elements)})
-            </span>
-          </label>
+        {legendElements.map(({ type, label, count, status, issues }) => (
+          <div key={type} className="flex items-center gap-2">
+            <label className="flex min-w-0 flex-1 items-center gap-2">
+              <input type="radio" name={radioGroup} checked={selectedElement === type} onChange={() => setSelectedElement(type)} />
+              <span className="min-w-0 flex-1">{label}</span>
+              <span aria-label={`Broj pronađenih: ${count}`} className={`${
+                status === 'detected_with_issue'
+                  ? 'text-amber-700'
+                  : status === 'detected'
+                    ? 'text-emerald-700'
+                    : 'text-red-600'
+              } shrink-0 font-semibold`}>
+                ({count})
+              </span>
+            </label>
+            {showElementStatusTooltip && <ElementStatusTooltip label={label} status={status} issues={issues} />}
+          </div>
         ))}
-        {analysis?.error && <span className="block text-amber-700">Analiza koda naišla je na problem.</span>}
-        {!analysis && <span className="block text-gray-500">Analiza koda nije dostupna.</span>}
+        {taskAnalysis?.syntax_error && <span className="block text-red-700">Pogreška sintakse u retku {taskAnalysis.syntax_error.lineno ?? '—'}: {taskAnalysis.syntax_error.message}</span>}
+        {!taskAnalysis && <span className="block text-gray-500">Analiza koda nije dostupna.</span>}
         </div>
       </aside>
       {template && template !== code && (
-        <p className="text-xs text-gray-500 lg:col-span-2">Predložak služi kao osnova za usporedbu; predani kod nije moguće uređivati.</p>
+        <p className="text-xs text-gray-500 lg:col-span-2">Predložak označen blijedim bojama služi kao osnova za usporedbu s kodom koji su učenici dodali.</p>
       )}
     </div>
   )

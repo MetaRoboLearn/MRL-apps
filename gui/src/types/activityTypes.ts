@@ -1,5 +1,12 @@
 import {UserBasic} from "./userTypes.ts";
 
+export type ProgrammingElementOption = {
+  id: string;
+  name: string;
+  description: string | null;
+  element_type_id: string;
+}
+
 export interface ActivityTask {
   activity_task_id: number;
   task_id: number;

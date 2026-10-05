@@ -30,6 +30,7 @@ from routes import user_routes, task_routes, activity_routes, activity_task_rout
     badge_routes, user_badge_routes, group_routes, user_group_routes, sticker_routes, admin_routes
 from routes import analytics_routes
 from routes import submission_routes
+from routes import programming_element_routes
 import models
 
 app = Flask(__name__, static_folder='static')
@@ -79,6 +80,7 @@ app.register_blueprint(sticker_routes.bp)
 app.register_blueprint(admin_routes.bp)
 app.register_blueprint(analytics_routes.bp)
 app.register_blueprint(submission_routes.bp)
+app.register_blueprint(programming_element_routes.bp)
 broker_routes.init_broker_websocket(app)
 
 logger.info("All blueprints registered")

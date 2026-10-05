@@ -4,11 +4,17 @@ import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from '@ta
 import { useState } from 'react'
 import { getActivityTasks, createActivityTask } from '../../../../../api/activitiesApi.ts'
 import { getTypes } from '../../../../../api/typesApi.ts'
+import { getProgrammingElements } from '../../../../../api/programmingElementsApi.ts'
 import { ActivityTaskForm } from '../../../../../components/Activity/ActivityTaskForm.tsx'
 
 const typesQueryOptions = queryOptions({
   queryKey: ['types'],
   queryFn: getTypes,
+})
+
+const programmingElementsQueryOptions = queryOptions({
+  queryKey: ['programming-elements'],
+  queryFn: getProgrammingElements,
 })
 
 const activityTasksQueryOptions = (activityId: string) =>
@@ -21,6 +27,7 @@ export const Route = createFileRoute('/admin/activities/$activityId/tasks/add')(
   loader: ({ context, params }) => {
     return Promise.all([
       context.queryClient.ensureQueryData(typesQueryOptions),
+      context.queryClient.ensureQueryData(programmingElementsQueryOptions),
       context.queryClient.ensureQueryData(activityTasksQueryOptions(params.activityId)),
     ])
   },
@@ -50,7 +57,7 @@ function RouteComponent() {
     },
   })
 
-  const handleSubmit = async (data: { task_id: number | null; type_id: number; preview: string; instructions: string; is_logged: boolean; allows_robot: boolean; difficulty: number | null }) => {
+  const handleSubmit = async (data: { task_id: number | null; type_id: number; preview: string; instructions: string; is_logged: boolean; allows_robot: boolean; difficulty: number | null; programming_element_ids: string[] }) => {
     setError(undefined)
     if (!data.task_id) return
 
@@ -64,6 +71,7 @@ function RouteComponent() {
       is_logged: data.is_logged,
       allows_robot: data.allows_robot,
       difficulty: data.difficulty,
+      programming_element_ids: data.programming_element_ids,
     })
   }
 

@@ -54,23 +54,39 @@ export type StudentGlobalStats = {
   total_time_seconds: number
 }
 
-export type CodeElementRange = {
-  type: string
-  line?: string | number
-  lineno?: number
-  end_line?: string | number
-  end_lineno?: number
-  col_offset?: number
-  end_col_offset?: number
+export type TaskAnalysisEvidence = {
+  lineno: number | null
+  end_lineno: number | null
+  col_offset?: number | null
+  end_col_offset?: number | null
+  issues: string[]
 }
 
-export type CodeAnalysis = {
-  elements?: CodeElementRange[]
-  code_elements?: CodeElementRange[]
-  counts?: Record<string, number>
-  stats?: Record<string, boolean | number>
-  error?: string
-} | null
+export type TaskExpectedElement = {
+  element_id: string
+  name: string
+  description?: string | null
+  position?: number
+  weight?: number
+  count: number
+  status: 'detected' | 'detected_with_issue' | 'not_detected'
+  evidence: TaskAnalysisEvidence[]
+}
+
+export type TaskAnalysis = {
+  syntax_valid: boolean
+  detection_method: 'AST' | 'REGEX'
+  syntax_error: {
+    message: string
+    lineno: number | null
+    end_lineno: number | null
+    col_offset: number | null
+    end_col_offset: number | null
+    source_line: string
+  } | null
+  expected_elements: TaskExpectedElement[]
+  weighted_completion?: number | null
+}
 
 export type SubmissionStatus = 'Success' | 'Fail' | 'in_progress'
 
@@ -113,7 +129,7 @@ export type TaskCard = {
   }
   final_code: string | null
   code_template?: string | null
-  code_analysis: CodeAnalysis
+  task_analysis: TaskAnalysis | null
   code_standard_analysis: Record<string, unknown> | null
   trajectory_png: string
   badge_definition: BadgeDefinition | null
@@ -137,6 +153,6 @@ export type Submission = {
   attempt_count: number
   duration_seconds: number
   final_code: string | null
-  code_analysis: CodeAnalysis
+  task_analysis: TaskAnalysis | null
   badge: BadgeAssignment | null
 }

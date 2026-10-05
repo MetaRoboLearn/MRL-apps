@@ -10,3 +10,6 @@ from .user_task_log import UserTaskLog
 from .user_task_log import EventType
 from .groups import Group
 from .user_groups import UserGroups
+from .element_type import ElementType
+from .programming_element import ProgrammingElement
+from .activity_task_programming_element import ActivityTaskProgrammingElement

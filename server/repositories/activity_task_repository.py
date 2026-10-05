@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.orm import Session, joinedload
-from models.activity_task import ActivityTask
+from models.activity_task import ActivityTask, Type
 from utils import utc_now
 
 
@@ -49,6 +49,7 @@ class ActivityTaskRepository:
         preview: Optional[str] = None,
         difficulty: Optional[int] = None,
         actor_user_id: Optional[int] = None,
+        commit: bool = True,
     ) -> ActivityTask:
         now = utc_now()
         activity_task = ActivityTask(
@@ -66,9 +67,10 @@ class ActivityTaskRepository:
             created_by=actor_user_id,
             updated_by=actor_user_id,
         )
-
         self.session.add(activity_task)
-        self.session.commit()
+        self.session.flush()
+        if commit:
+            self.session.commit()
         self.session.refresh(activity_task)
         return activity_task
 
@@ -87,6 +89,7 @@ class ActivityTaskRepository:
         allows_robot: Optional[bool] = None,
         difficulty: Optional[int] = None,
         actor_user_id: Optional[int] = None,
+        commit: bool = True,
     ) -> Optional[ActivityTask]:
         activity_task = self.get_by_id(activity_task_id)
         if not activity_task:
@@ -110,11 +113,12 @@ class ActivityTaskRepository:
             activity_task.allows_robot = allows_robot
         if difficulty is not None:
             activity_task.difficulty = difficulty
-
         activity_task.updated_at = utc_now()
         activity_task.updated_by = actor_user_id
 
-        self.session.commit()
+        self.session.flush()
+        if commit:
+            self.session.commit()
         self.session.refresh(activity_task)
         return activity_task
 

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from access_policies import activity_read_scope, group_read_scope
 from models import ActivityTask, User, UserStartedTask, UserTaskLog
+from models.activity_task_programming_element import ActivityTaskProgrammingElement
 from models.activity import Activity
 from models.groups import Group
 from models.user_groups import UserGroups
@@ -42,6 +43,10 @@ class AnalyticsRepository:
                 joinedload(UserTaskLog.user_started_task)
                 .joinedload(UserStartedTask.activity_task)
                 .joinedload(ActivityTask.type),
+                joinedload(UserTaskLog.user_started_task)
+                .joinedload(UserStartedTask.activity_task)
+                .selectinload(ActivityTask.programming_elements)
+                .joinedload(ActivityTaskProgrammingElement.programming_element),
             )
         )
 

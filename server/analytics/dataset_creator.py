@@ -10,8 +10,7 @@ import pandas as pd
 from flask_login import current_user
 
 from repositories.analytics_repository import AnalyticsRepository
-from validators.code_element_detection.analyzer_ast import analyze_code as analyze_code_ast
-from validators.code_element_detection.analyzer_regex import analyze_code as analyze_code_regex
+from validators.code_element_detection.analyzer_orchestrator import analyze_task_elements
 from validators.coding_standard_analyzer.coding_standard_analyzer import analyze_coding_standard
 from analytics.session_outcomes import SESSION_OUTCOME_PRIORITY, SESSION_OUTCOMES
 
@@ -22,6 +21,7 @@ EVENT_COLUMNS = (
     "username", "first_name", "last_name", "action_time", "action_type", "value",
     "session_start", "final_code_db", "db_is_finished", "task_title", "task_description",
     "activity_title", "task_code_template", "task_preview", "task_difficulty", "app_mode",
+    "programming_elements",
 )
 
 RUN_EVENTS = frozenset(("sim_run", "robot_run"))
@@ -56,22 +56,24 @@ def _is_missing(value) -> bool:
         return False
 
 
-def _analyze_submission(code: str, app_mode: str) -> tuple[dict | None, dict | None]:
-    if not code or app_mode == "blockly":
+def _analyze_submission(
+    code: str,
+    app_mode: str,
+    programming_elements: list[dict] | None,
+) -> tuple[dict | None, dict | None]:
+    if app_mode == "blockly":
         return None, None
     try:
-        code_analysis = analyze_code_ast(code)
-        if "error" in code_analysis:
-            code_analysis = analyze_code_regex(code)
+        task_analysis = analyze_task_elements(code, programming_elements or [])
     except Exception:
         logger.exception("Code-element analysis failed")
-        code_analysis = {"error": "code analysis failed", "elements": [], "counts": {}}
+        task_analysis = None
     try:
         standard_analysis = analyze_coding_standard(code)
     except Exception:
         logger.exception("Coding-standard analysis failed")
         standard_analysis = {"error": "coding-standard analysis failed"}
-    return code_analysis, standard_analysis
+    return task_analysis, standard_analysis
 
 
 def _calculate_complexity(code: object, mode: str, template: object | None = None) -> int:
@@ -125,6 +127,15 @@ def _row_from_log(log) -> dict:
         "task_preview": activity_task.preview,
         "task_difficulty": activity_task.difficulty,
         "app_mode": activity_task.type.name.lower() if activity_task.type else "blockly",
+        "programming_elements": [
+            {
+                "id": link.programming_element.id,
+                "name": link.programming_element.name,
+                "description": link.programming_element.description,
+                "position": link.position,
+            }
+            for link in activity_task.programming_elements
+        ],
     }
 
 
@@ -146,7 +157,7 @@ def load_event_dataframe(repository: AnalyticsRepository, filters: DatasetFilter
     return dataframe
 
 
-def _processed_record(row, edits, runs, fails, complexity, outcome, completed, final_code, code_analysis, standard_analysis):
+def _processed_record(row, edits, runs, fails, complexity, outcome, completed, final_code, task_analysis, standard_analysis):
     duration = max(0, (row["action_time"] - row["session_start"]).total_seconds())
     return {
         **{column: row[column] for column in EVENT_COLUMNS if column in row},
@@ -159,7 +170,7 @@ def _processed_record(row, edits, runs, fails, complexity, outcome, completed, f
         "session_outcome": outcome,
         "is_task_completion": completed,
         "final_code": final_code,
-        "code_analysis": code_analysis,
+        "task_analysis": task_analysis,
         "code_standard_analysis": standard_analysis,
     }
 
@@ -175,7 +186,14 @@ def _process_session(group: pd.DataFrame) -> list[dict]:
     if _is_missing(final_code):
         values = group["value"].dropna().astype(str)
         final_code = values.iloc[-1] if not values.empty else ""
-    code_analysis, standard_analysis = _analyze_submission(_text(final_code), _text(first["app_mode"]).lower())
+    programming_elements = first.get("programming_elements", [])
+    if not isinstance(programming_elements, list):
+        programming_elements = []
+    task_analysis, standard_analysis = _analyze_submission(
+        _text(final_code),
+        _text(first["app_mode"]).lower(),
+        programming_elements,
+    )
 
     edits = runs = fails = complexity = 0
     completed = has_finish = has_robot_success = has_sim_success = False
@@ -189,7 +207,7 @@ def _process_session(group: pd.DataFrame) -> list[dict]:
             runs += 1
         elif action in ("sim_end_fail", "robot_end_fail", "sim_code_err", "robot_code_err"):
             fails += 1
-            records.append(_processed_record(row, edits, runs, fails, complexity, SESSION_OUTCOMES["FAIL"], False, final_code, code_analysis, standard_analysis))
+            records.append(_processed_record(row, edits, runs, fails, complexity, SESSION_OUTCOMES["FAIL"], False, final_code, task_analysis, standard_analysis))
         elif action in ("sim_end_succ", "robot_end_succ"):
             if action == "robot_end_succ" and has_robot_success:
                 continue
@@ -203,15 +221,15 @@ def _process_session(group: pd.DataFrame) -> list[dict]:
                 if action == "robot_end_succ"
                 else SESSION_OUTCOMES["SUCCESS_SIM"]
             )
-            records.append(_processed_record(row, edits, runs, fails, complexity, outcome, True, final_code, code_analysis, standard_analysis))
+            records.append(_processed_record(row, edits, runs, fails, complexity, outcome, True, final_code, task_analysis, standard_analysis))
         elif action == "task_finish":
             has_finish = True
             db_is_finished = bool(row.get("db_is_finished", first.get("db_is_finished", False)))
             if not completed:
                 outcome = SESSION_OUTCOMES["FAIL"] if db_is_finished else SESSION_OUTCOMES["ABANDONED"]
-                records.append(_processed_record(row, edits, runs, fails, complexity, outcome, False, final_code, code_analysis, standard_analysis))
+                records.append(_processed_record(row, edits, runs, fails, complexity, outcome, False, final_code, task_analysis, standard_analysis))
     if not bool(first["db_is_finished"]) and not has_finish and not completed:
-        records.append(_processed_record(group.iloc[-1], edits, runs, fails, complexity, SESSION_OUTCOMES["ABANDONED"], False, final_code, code_analysis, standard_analysis))
+        records.append(_processed_record(group.iloc[-1], edits, runs, fails, complexity, SESSION_OUTCOMES["ABANDONED"], False, final_code, task_analysis, standard_analysis))
     return records
 
 
@@ -270,7 +288,7 @@ def build_session_summaries(processed: pd.DataFrame) -> pd.DataFrame:
             "final_complexity": last["code_complexity"],
             "status": _best_outcome(group["session_outcome"]) or last["session_outcome"],
             "final_code": last["final_code"],
-            "code_analysis": last["code_analysis"],
+            "task_analysis": last["task_analysis"],
             "code_standard_analysis": last["code_standard_analysis"],
         })
     result = pd.DataFrame(summaries)

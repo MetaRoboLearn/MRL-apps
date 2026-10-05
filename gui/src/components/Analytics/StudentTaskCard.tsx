@@ -36,6 +36,16 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
   const [comment, setComment] = useState(card.badge?.comment || '')
   const [codeExpanded, setCodeExpanded] = useState(false)
   const isAssigned = Boolean(card.badge)
+  const completionPercent = typeof card.task_analysis?.weighted_completion === 'number'
+    ? Math.min(100, Math.max(0, Math.round(card.task_analysis.weighted_completion * 100)))
+    : null
+  const completionTone = completionPercent === null
+    ? null
+    : completionPercent < 40
+      ? { bar: 'bg-red-500', text: 'text-red-700', label: 'Niska pokrivenost' }
+      : completionPercent < 80
+        ? { bar: 'bg-amber-500', text: 'text-amber-700', label: 'Srednja pokrivenost' }
+        : { bar: 'bg-emerald-500', text: 'text-emerald-700', label: 'Visoka pokrivenost' }
 
   useEffect(() => {
     setComment(card.badge?.comment || '')
@@ -54,8 +64,31 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
       <dl className="mb-5 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
         <div><dt className="text-gray-500">Utrošeno vrijeme</dt><dd className="font-medium">{formatDuration(card.time_spent_seconds)}</dd></div>
         <div><dt className="text-gray-500">Broj pokretanja</dt><dd className="font-medium">{card.attempt_count}</dd></div>
-        <div><dt className="text-gray-500">Difficulty</dt><dd className="font-medium">{card.task_difficulty ?? '—'}</dd></div>
+        <div><dt className="text-gray-500">Razina strukture</dt><dd className="font-medium">{card.task_difficulty ?? '—'}</dd></div>
         <div><dt className="text-gray-500">Attempted</dt><dd className="font-medium">{card.attempt_date ? formatLocalDateTime(card.attempt_date) : '—'}</dd></div>
+        {completionPercent !== null && (
+          <div className="md:col-span-2">
+            <dt id={`task-completion-label-${card.activity_task_id}`} className="text-gray-500">Postotak pokrivenih očekivanih elemenata</dt>
+            <dd className="mt-1 flex items-center gap-3">
+              <div
+                role="progressbar"
+                aria-labelledby={`task-completion-label-${card.activity_task_id}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={completionPercent}
+                aria-valuetext={`${completionTone?.label}: ${completionPercent}%`}
+                className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200"
+              >
+                <div
+                  aria-hidden="true"
+                  className={`h-full rounded-full transition-[width] duration-300 ${completionTone?.bar}`}
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+              <span className={`min-w-10 text-right font-semibold tabular-nums ${completionTone?.text}`}>{completionPercent}%</span>
+            </dd>
+          </div>
+        )}
       </dl>
 
       <details className="mb-5 border-y border-gray-200 py-5">
@@ -79,7 +112,7 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
       <details className="mb-5 border-b border-gray-200 pb-5" onToggle={(event) => setCodeExpanded(event.currentTarget.open)}>
         <summary className="cursor-pointer font-semibold text-gray-800">Predani kod</summary>
         <div className="pt-3">
-          <CodeAnalysisViewer code={card.final_code || ''} analysis={card.code_analysis} template={card.code_template} expanded visible={codeExpanded} />
+          <CodeAnalysisViewer code={card.final_code || ''} taskAnalysis={card.task_analysis} template={card.code_template} expanded visible={codeExpanded} />
         </div>
       </details>
 
