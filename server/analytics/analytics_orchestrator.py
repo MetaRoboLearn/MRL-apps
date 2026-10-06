@@ -5,9 +5,11 @@ from typing import Any
 
 from analytics.dataset_creator import DatasetFilters, create_dataset
 from repositories.user_badge_repository import UserBadgeRepository
-from validators.llm_feedback_generator.llm_feedback_generator import LLMFeedbackGenerator
+from validators.llm_feedback_generator import generate_feedback
+from validators.llm_feedback_generator.llm_provider import ProviderError
 from models.badge import Badge
 from models.activity import Activity
+from models.user_started_task import UserStartedTask
 from analytics.visualisation_algorithm import (
     _as_data_uri,
     _json_value,
@@ -23,10 +25,6 @@ from analytics.session_outcomes import SESSION_OUTCOMES
 from utils import utc_now
 
 logger = logging.getLogger(__name__)
-
-#TODO: This should be configurable by external env, hardcoded for now
-llm_feedback_api_base="http://192.168.178.94:1234/v1"
-model_name="google/gemma-4-26b-a4b-qat"
 
 def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
     """Return read-only badge state keyed by the linked activity task."""
@@ -203,20 +201,77 @@ def generate_reduced_submissions(session, student_id: int) -> list[dict[str, Any
     return submissions
 
 
-def generate_llm_feedback(code: str, analysis: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Generate a teacher-editable comment suggestion; never persisted here."""
-    if not code or not code.strip():
-        logger.warning("LLM feedback requested without code")
-        return {"error": "code is required"}
-    logger.info("Starting LLM feedback generation: analysis_supplied=%s", analysis is not None)
+def generate_llm_feedback(session, user_started_task_id: int) -> dict[str, Any]:
+    """Generate feedback from an authorized task summary; never persist the draft."""
+    started_task = session.query(UserStartedTask).filter(
+        UserStartedTask.id == user_started_task_id
+    ).first()
+    if (
+        not started_task
+        or not started_task.started_by
+        or not started_task.starter
+        or not started_task.starter.role
+        or started_task.starter.role.name != "student"
+    ):
+        logger.warning("LLM feedback task not found: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Selected submission not found", "status_code": 404}
+
+    filters = DatasetFilters(
+        user_ids=(started_task.started_by,),
+        activity_task_ids=(started_task.activity_task_id,),
+    )
+    _, summaries = create_dataset(session, filters)
+    if summaries.empty or "user_started_task_id" not in summaries:
+        logger.warning("LLM feedback task is inaccessible or has no submission: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Selected submission not found", "status_code": 404}
+
+    selected_summary = summaries[
+        summaries["user_started_task_id"] == user_started_task_id
+    ]
+    if selected_summary.empty:
+        logger.warning("LLM feedback task is inaccessible: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Selected submission not found", "status_code": 404}
+
+    summary = selected_summary.iloc[0]
+    code = summary.get("final_code")
+    if not isinstance(code, str) or not code.strip():
+        logger.warning("LLM feedback task has no code: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Submitted code is unavailable", "status_code": 400}
+
+    task_analysis = summary.get("task_analysis")
+    if not isinstance(task_analysis, dict):
+        task_analysis = None
+    code_standard_analysis = summary.get("code_standard_analysis")
+    if not isinstance(code_standard_analysis, dict):
+        code_standard_analysis = None
+
+    logger.info(
+        "Starting LLM feedback generation: user_started_task_id=%s task_analysis_supplied=%s",
+        user_started_task_id,
+        task_analysis is not None,
+    )
     try:
-        generator = LLMFeedbackGenerator(api_base=llm_feedback_api_base, model=model_name)
-        suggestion = generator.generate_feedback(code, analysis)
-    except Exception as error:  # provider errors, timeouts, invalid output
+        result = generate_feedback(code, task_analysis, code_standard_analysis)
+    except ProviderError as error:
+        logger.exception("LLM feedback provider is unavailable")
+        return {
+            "error": "Feedback provider is unavailable",
+            "error_code": error.kind,
+            "status_code": 502,
+        }
+    except Exception:
         logger.exception("LLM feedback generation failed")
-        return {"error": f"Failed to generate feedback: {error}"}
-    if suggestion.startswith("Error generating feedback"):
-        logger.warning("LLM feedback provider returned an error response")
-    else:
-        logger.info("LLM feedback generation completed")
-    return {"suggestion": suggestion}
+        return {
+            "error": "Failed to generate feedback",
+            "error_code": "provider",
+            "status_code": 502,
+        }
+
+    if result["used_fallback"]:
+        logger.warning(
+            "LLM feedback used deterministic fallback: user_started_task_id=%s sections=%s",
+            user_started_task_id,
+            result["fallback_sections"],
+        )
+    logger.info("LLM feedback generation completed: user_started_task_id=%s", user_started_task_id)
+    return result

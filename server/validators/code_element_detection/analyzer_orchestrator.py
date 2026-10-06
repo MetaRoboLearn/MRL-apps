@@ -14,10 +14,13 @@ def _roc_weights(positions: list[int]) -> list[float]:
     element_count = len(positions)
     if element_count == 0:
         return []
-    return [
-        sum(1 / rank for rank in range(position, element_count + 1)) / element_count
-        for position in positions
-    ]
+    weights = [0.0] * element_count
+    ranked_indexes = sorted(range(element_count), key=positions.__getitem__)
+    for ordinal, index in enumerate(ranked_indexes, start=1):
+        weights[index] = sum(
+            1 / rank for rank in range(ordinal, element_count + 1)
+        ) / element_count
+    return weights
 
 
 def _evidence_for_element(raw_elements: list[dict[str, Any]], element_id: str) -> list[dict[str, Any]]:

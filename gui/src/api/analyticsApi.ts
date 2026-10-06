@@ -5,6 +5,20 @@ import {
   Submission,
 } from '../types/analyticsTypes.ts'
 
+export type LlmFeedbackResponse = {
+  suggestion: string
+  used_fallback: boolean
+  fallback_sections: string[]
+  fallback_reasons: { section: string; reason: string }[]
+}
+
+export class LlmFeedbackError extends Error {
+  constructor(message: string, readonly code: string) {
+    super(message)
+    this.name = 'LlmFeedbackError'
+  }
+}
+
 const buildFilters = ({ groupIds, activityIds, includeUnassigned }: AnalyticsFilters) => {
   const params = new URLSearchParams()
   params.set('group_ids', groupIds.join(','))
@@ -63,17 +77,26 @@ export const getSubmissions = async (): Promise<Submission[]> => {
   return response.json()
 }
 
-export const requestLlmFeedback = async (code: string, analysis?: unknown): Promise<string> => {
+export const requestLlmFeedback = async (userStartedTaskId: number): Promise<LlmFeedbackResponse> => {
   const response = await fetch('/api/analytics/llm_feedback', {
     credentials: 'include',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, analysis }),
+    body: JSON.stringify({ user_started_task_id: userStartedTaskId }),
   })
 
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to generate feedback'))
+    try {
+      const payload = await response.json() as { error?: string; code?: string }
+      throw new LlmFeedbackError(
+        payload.error || 'Failed to generate feedback',
+        payload.code || 'provider',
+      )
+    } catch (error) {
+      if (error instanceof LlmFeedbackError) throw error
+      throw new LlmFeedbackError('Failed to generate feedback', 'provider')
+    }
   }
 
-  return response.text()
+  return response.json()
 }

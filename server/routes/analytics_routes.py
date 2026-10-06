@@ -101,11 +101,19 @@ def get_student_portfolio(student_id: int):
 @role_required("admin", "teacher")
 def post_llm_feedback():
     data = request.get_json(silent=True) or {}
-    code = data.get("code")
-    if not isinstance(code, str) or not code.strip():
-        return jsonify({"error": "code is required"}), 400
+    user_started_task_id = data.get("user_started_task_id")
+    if (
+        not isinstance(user_started_task_id, int)
+        or isinstance(user_started_task_id, bool)
+        or user_started_task_id <= 0
+    ):
+        return jsonify({"error": "user_started_task_id must be a positive integer"}), 400
 
-    result = generate_llm_feedback(code, data.get("analysis"))
+    with db_session() as session:
+        result = generate_llm_feedback(session, user_started_task_id)
     if "error" in result:
-        return jsonify(result), 502
-    return Response(result["suggestion"], status=200, mimetype="text/plain")
+        return jsonify({
+            "error": result["error"],
+            "code": result.get("error_code", "provider"),
+        }), result.get("status_code", 502)
+    return jsonify(result), 200

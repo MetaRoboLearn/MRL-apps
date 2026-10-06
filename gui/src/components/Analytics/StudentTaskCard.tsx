@@ -8,7 +8,11 @@ type StudentTaskCardProps = {
   onAssign: (card: TaskCard, comment: string) => void
   onUpdate: (card: TaskCard, comment: string) => void
   onUnassign: (card: TaskCard) => void
-  onSuggest: (card: TaskCard, setComment: (comment: string) => void) => void
+  onSuggest: (
+    card: TaskCard,
+    setComment: (comment: string) => void,
+    setNotice: (notice: { kind: 'fallback' | 'error'; message: string } | null) => void,
+  ) => void
   isMutating: boolean
   isSuggesting: boolean
   isSuggestionPending: boolean
@@ -35,6 +39,7 @@ const statusClasses = (status: string) => {
 export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSuggest, isMutating, isSuggesting, isSuggestionPending }: StudentTaskCardProps) {
   const [comment, setComment] = useState(card.badge?.comment || '')
   const [codeExpanded, setCodeExpanded] = useState(false)
+  const [suggestionNotice, setSuggestionNotice] = useState<{ kind: 'fallback' | 'error'; message: string } | null>(null)
   const isAssigned = Boolean(card.badge)
   const completionPercent = typeof card.task_analysis?.weighted_completion === 'number'
     ? Math.min(100, Math.max(0, Math.round(card.task_analysis.weighted_completion * 100)))
@@ -125,9 +130,12 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
           <div className="flex flex-col gap-3 md:flex-row md:items-start">
             <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Teacher comment" rows={3} className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm" />
             <div className="flex flex-wrap gap-2 md:w-64">
-              <button type="button" disabled={isMutating || isSuggestionPending} aria-busy={isSuggesting} onClick={() => onSuggest(card, setComment)} className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">
+              <button type="button" disabled={isMutating || isSuggestionPending} aria-busy={isSuggesting} onClick={() => {
+                setSuggestionNotice(null)
+                onSuggest(card, setComment, setSuggestionNotice)
+              }} className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">
                 {isSuggesting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400/40 border-t-gray-700" aria-hidden="true" />}
-                {isSuggesting ? 'Generating comment...' : 'Suggest comment'}
+                {isSuggesting ? 'Generiranje prijedloga...' : 'Predloži komentar'}
               </button>
               {isAssigned ? (
                 <>
@@ -139,6 +147,15 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
               )}
             </div>
           </div>
+        )}
+        {suggestionNotice && (
+          <p
+            role={suggestionNotice.kind === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+            className={`mt-3 text-sm ${suggestionNotice.kind === 'error' ? 'text-red-700' : 'text-amber-800'}`}
+          >
+            {suggestionNotice.message}
+          </p>
         )}
       </section>
     </article>

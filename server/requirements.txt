@@ -8,6 +8,8 @@ Flask-Migrate
 python-dotenv
 flask-sock
 requests
+google-genai
+httpx
 websocket-client
 bcrypt
 flask_login

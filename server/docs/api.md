@@ -67,3 +67,12 @@ Python analytics and student submission responses include `task_analysis`. It co
 | GET    | `/api/user-task-logs`              | `skip=int` <br> `limit=int` <br> `user_started_task_id=int` <br> `event_type_id=int` <br> `order_by_created_at=bool` | list[UserTaskLog]   | Vraća listu UserTaskLog-a          |
 | POST   | `/api/user-task-logs`              | `user_started_task_id=int` <br> `event_type_id=int` <br> `code_snapshot=string`                                      | UserTaskLog         | Stvara novi UserTaskLog            |
 | DELETE | `/api/user-task-logs/<log_id:int>` | /                                                                                                                    | `{ deleted: true }` | Briše UserTaskLog po njegovom ID-u |
+
+# Analytics feedback
+| Action | Path | Params / Body | Return | Description |
+|--------|------|---------------|--------|-------------|
+| POST | `/api/analytics/llm_feedback` | `{ user_started_task_id: positive integer }` | `{ suggestion, used_fallback, fallback_sections, fallback_reasons }` | Teacher/admin only. The backend resolves the submission code and task analysis through the role-aware analytics dataset. The browser does not send code, analysis, provider mode, or credentials. The suggestion is a browser-local teacher draft until Assign/Update. |
+
+Provider failures return `{ error, code }`. The `code` is one of `configuration`, `timeout`, `rate_limit`, `authentication`, `invalid_response`, or `provider`; success responses use deterministic fallback text when a generated section fails validation or provider generation.
+
+Provider mode and credentials are configured only on the backend with `LLM_FEEDBACK_PROVIDER`, `LLM_FEEDBACK_LOCAL_API_BASE`, `LLM_FEEDBACK_LOCAL_MODEL`, `LLM_FEEDBACK_GEMINI_API_KEY`, and `LLM_FEEDBACK_GEMINI_MODEL`. Gemini requests use the official `google-genai` Python SDK, which selects the API endpoint.

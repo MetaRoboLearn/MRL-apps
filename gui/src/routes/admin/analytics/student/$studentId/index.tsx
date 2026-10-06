@@ -2,12 +2,29 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { z } from 'zod'
-import { getStudentPortfolio, requestLlmFeedback } from '../../../../../api/analyticsApi.ts'
+import { getStudentPortfolio, LlmFeedbackError, requestLlmFeedback } from '../../../../../api/analyticsApi.ts'
 import { assignBadge, removeBadge, updateBadgeComment } from '../../../../../api/userBadgeApi.ts'
 import { StudentTaskCard } from '../../../../../components/Analytics/StudentTaskCard.tsx'
 import { getUsersByIds } from '../../../../../api/usersApi.ts'
 import { AnalyticsFilters, TaskCard } from '../../../../../types/analyticsTypes.ts'
 import { formatDuration } from '../../../../../utils.ts'
+
+const feedbackFailureMessages: Record<string, string> = {
+  configuration: 'Pružatelj povratnih informacija nije pravilno postavljen.',
+  timeout: 'Generiranje je trajalo predugo. Pokušaj ponovno.',
+  rate_limit: 'Dosegnuto je ograničenje zahtjeva. Pokušaj ponovno kasnije.',
+  authentication: 'Pružatelj povratnih informacija nije prihvatio vjerodajnice.',
+  invalid_response: 'Pružatelj je vratio neispravan odgovor.',
+  provider: 'Povratnu informaciju trenutačno nije moguće izraditi.',
+}
+
+const fallbackReasonMessages: Record<string, string> = {
+  timeout: 'Usluga je istekla.',
+  rate_limit: 'Dosegnuto je ograničenje zahtjeva.',
+  authentication: 'Provjeri konfiguraciju vjerodajnica.',
+  invalid_response: 'Odgovor usluge nije prošao provjeru.',
+  provider: 'Usluga trenutačno nije dostupna.',
+}
 
 const ids = z.preprocess((value) => {
   const values = Array.isArray(value) ? value : [value]
@@ -70,7 +87,7 @@ function RouteComponent() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['student-portfolio', numericStudentId] }),
   })
   const suggestionMutation = useMutation({
-    mutationFn: ({ card }: { card: TaskCard }) => requestLlmFeedback(card.final_code || '', card.code_standard_analysis),
+    mutationFn: ({ card }: { card: TaskCard }) => requestLlmFeedback(card.user_started_task_id),
   })
 
   if (portfolioQuery.isLoading) return <main className="p-6">Loading portfolio...</main>
@@ -108,12 +125,29 @@ function RouteComponent() {
               onAssign={(selectedCard, comment) => mutation.mutate({ action: 'assign', card: selectedCard, comment })}
               onUpdate={(selectedCard, comment) => mutation.mutate({ action: 'update', card: selectedCard, comment })}
               onUnassign={(selectedCard) => mutation.mutate({ action: 'remove', card: selectedCard })}
-              onSuggest={async (selectedCard, setComment) => {
+              onSuggest={async (selectedCard, setComment, setNotice) => {
                 try {
                   const suggestion = await suggestionMutation.mutateAsync({ card: selectedCard })
-                  setComment(suggestion)
+                  setComment(suggestion.suggestion)
+                  if (suggestion.used_fallback) {
+                    const reasons = [...new Set(suggestion.fallback_reasons.map(
+                      ({ reason }) => fallbackReasonMessages[reason],
+                    ).filter(Boolean))]
+                    setNotice({
+                      kind: 'fallback',
+                      message: [
+                        'Neki dijelovi prijedloga koriste unaprijed pripremljen tekst.',
+                        ...reasons,
+                        'Provjeri prijedlog prije spremanja.',
+                      ].join(' '),
+                    })
+                  }
                 } catch (error) {
-                  window.alert(error instanceof Error ? error.message : 'Failed to generate feedback')
+                  const errorCode = error instanceof LlmFeedbackError ? error.code : 'provider'
+                  setNotice({
+                    kind: 'error',
+                    message: feedbackFailureMessages[errorCode] || feedbackFailureMessages.provider,
+                  })
                 }
               }}
             />
