@@ -102,6 +102,8 @@ def build_feedback_plan(
         else None
     )
 
+    all_detected = len(detected) == len(expected_elements)
+
     main_recommendation = syntax_recommendation
     if main_recommendation is None and problems:
         main_recommendation = _plan_item(problems[0])
@@ -121,15 +123,22 @@ def build_feedback_plan(
     reflection_question = None
     if reflection_target:
         reflection_question = {
+            "reflection_goal": (
+                "refine_existing_code"
+                if all_detected and main_recommendation is None
+                else "address_selected_issue"
+            ),
             "kind": reflection_target["kind"],
             "element_id": reflection_target.get("element_id"),
             "name": reflection_target.get("name"),
+            "status": reflection_target.get("status"),
+            "description": reflection_target.get("description"),
+            "position": reflection_target.get("position"),
             "topic": reflection_target.get("name") or "pogreška sintakse",
             "evidence": reflection_target.get("evidence", []),
             "syntax_error": reflection_target.get("syntax_error"),
         }
 
-    all_detected = len(detected) == len(expected_elements)
     return {
         "source": "task_analysis",
         "syntax_valid": analysis.get("syntax_valid"),
