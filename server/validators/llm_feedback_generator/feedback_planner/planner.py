@@ -58,6 +58,18 @@ def _has_same_syntax_issue(
     return False
 
 
+def _syntax_region(
+    expected_elements: list[dict[str, Any]],
+    syntax_error: dict[str, Any] | None,
+) -> str:
+    for element in expected_elements:
+        if _has_same_syntax_issue(element, syntax_error):
+            region = element.get("feedback_region_description")
+            if isinstance(region, str) and region.strip():
+                return region.strip()
+    return "opći strukturni dio koda"
+
+
 def build_feedback_plan(
     task_analysis: dict[str, Any] | None,
     code_standard_analysis: dict[str, Any] | None = None,
@@ -97,6 +109,7 @@ def build_feedback_plan(
             "description": None,
             "evidence": [],
             "syntax_error": syntax_error,
+            "syntax_region": _syntax_region(expected_elements, syntax_error),
         }
         if analysis.get("syntax_valid") is False and isinstance(syntax_error, dict)
         else None
@@ -137,6 +150,7 @@ def build_feedback_plan(
             "topic": reflection_target.get("name") or "pogreška sintakse",
             "evidence": reflection_target.get("evidence", []),
             "syntax_error": reflection_target.get("syntax_error"),
+            "syntax_region": reflection_target.get("syntax_region"),
         }
 
     return {

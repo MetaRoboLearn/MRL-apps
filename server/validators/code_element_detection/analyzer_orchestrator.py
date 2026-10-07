@@ -80,6 +80,7 @@ def analyze_task_elements(code: str, selected_elements: list[dict[str, Any]]) ->
             "element_id": element_id,
             "name": element["name"],
             "description": element.get("description"),
+            "feedback_region_description": element.get("feedback_region_description"),
             "position": element["position"],
             "weight": round(weight, 4),
             "count": len(evidence),

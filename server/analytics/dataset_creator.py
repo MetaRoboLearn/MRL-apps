@@ -132,6 +132,7 @@ def _row_from_log(log) -> dict:
                 "id": link.programming_element.id,
                 "name": link.programming_element.name,
                 "description": link.programming_element.description,
+                "feedback_region_description": link.programming_element.feedback_region_description,
                 "position": link.position,
             }
             for link in activity_task.programming_elements

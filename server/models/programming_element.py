@@ -11,6 +11,7 @@ class ProgrammingElement(Base):
     id = Column(String(64), primary_key=True)
     name = Column(String(120), nullable=False)
     description = Column(Text)
+    feedback_region_description = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
     element_type_id = Column(String(120), ForeignKey('element_type.id'), nullable=False)

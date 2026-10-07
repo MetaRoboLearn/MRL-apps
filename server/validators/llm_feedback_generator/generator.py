@@ -42,6 +42,8 @@ def generate_feedback(
     task_analysis: dict[str, Any] | None,
     code_standard_analysis: dict[str, Any] | None = None,
     *,
+    task_title: str | None = None,
+    task_preview: str | None = None,
     provider: FeedbackProvider | None = None,
 ) -> dict[str, Any]:
     """Plan, generate, validate, and assemble one teacher-editable suggestion."""
@@ -49,7 +51,12 @@ def generate_feedback(
         raise ValueError("code is required")
 
     feedback_plan = build_feedback_plan(task_analysis, code_standard_analysis)
-    generation_requests = build_generation_requests(feedback_plan, code)
+    generation_requests = build_generation_requests(
+        feedback_plan,
+        code,
+        task_title=task_title,
+        task_preview=task_preview,
+    )
     active_provider = provider
     if generation_requests and active_provider is None:
         active_provider = get_provider()

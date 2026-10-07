@@ -244,6 +244,12 @@ def generate_llm_feedback(session, user_started_task_id: int) -> dict[str, Any]:
     code_standard_analysis = summary.get("code_standard_analysis")
     if not isinstance(code_standard_analysis, dict):
         code_standard_analysis = None
+    task_title = summary.get("task_title")
+    if not isinstance(task_title, str):
+        task_title = None
+    task_preview = summary.get("task_preview")
+    if not isinstance(task_preview, str):
+        task_preview = None
 
     logger.info(
         "Starting LLM feedback generation: user_started_task_id=%s task_analysis_supplied=%s",
@@ -251,7 +257,13 @@ def generate_llm_feedback(session, user_started_task_id: int) -> dict[str, Any]:
         task_analysis is not None,
     )
     try:
-        result = generate_feedback(code, task_analysis, code_standard_analysis)
+        result = generate_feedback(
+            code,
+            task_analysis,
+            code_standard_analysis,
+            task_title=task_title,
+            task_preview=task_preview,
+        )
     except ProviderError as error:
         logger.exception("LLM feedback provider is unavailable")
         return {
