@@ -122,17 +122,17 @@ function RouteComponent() {
   }
 
   const isSpecificMode = mode === 'include' || mode === 'exclude'
-  const actionLabel = mode === 'exclude' ? 'Exclude' : 'Add'
-  const undoLabel = mode === 'exclude' ? 'Include' : 'Remove'
+  const actionLabel = mode === 'exclude' ? 'Isključi' : 'Dodaj'
+  const undoLabel = mode === 'exclude' ? 'Uključi' : 'Ukloni'
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
+    <div className="readable-content p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Student Selection</h1>
+          <h1 className="text-2xl font-bold">Odabir učenika</h1>
           {task && (
             <p className="text-gray-500 mt-1">
-              Task: {task.task_title} (ID: {task.task_id})
+              Zadatak: {task.task_title} (ID: {task.task_id})
             </p>
           )}
         </div>
@@ -145,21 +145,21 @@ function RouteComponent() {
           }
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Back
+          Natrag
         </button>
       </div>
 
       {/* Mode dropdown */}
       <div className="mb-4 max-w-xs">
-        <label className="block text-sm font-medium mb-1">Selection mode</label>
+        <label className="mb-1 block font-medium">Način odabira</label>
         <select
           value={mode}
           onChange={(e) => handleModeChange(e.target.value as StudentMode)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
         >
-          <option value="all">All students</option>
-          <option value="include">Add specific students</option>
-          <option value="exclude">Exclude specific students</option>
+          <option value="all">Svi učenici</option>
+          <option value="include">Dodaj određene učenike</option>
+          <option value="exclude">Isključi određene učenike</option>
         </select>
       </div>
 
@@ -172,10 +172,10 @@ function RouteComponent() {
           page={page}
           hasMore={(studentData?.students || []).length === PAGE_SIZE}
           search={search}
-          selectedTitle={mode === 'exclude' ? 'Excluded Students' : 'Added Students'}
+          selectedTitle={mode === 'exclude' ? 'Isključeni učenici' : 'Dodani učenici'}
           actionLabel={actionLabel}
           undoLabel={undoLabel}
-          selectedEmptyLabel={`No students ${mode === 'exclude' ? 'excluded' : 'added'} yet.`}
+          selectedEmptyLabel={mode === 'exclude' ? 'Još nema isključenih učenika.' : 'Još nema dodanih učenika.'}
           actionClassName={mode === 'exclude' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : undefined}
           selectedClassName={mode === 'exclude' ? 'bg-orange-50' : undefined}
           batchSelector={(
@@ -187,9 +187,9 @@ function RouteComponent() {
           onToggle={toggleStudent}
         />
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-2xl">
-          <div className="flex items-center justify-center text-sm text-gray-400 border border-dashed border-gray-200 rounded-md py-8">
-            All students will be included in this task.
+        <div className="max-w-2xl rounded-lg border border-gray-200 bg-white p-6">
+          <div className="flex items-center justify-center rounded-md border border-dashed border-gray-200 py-8 text-gray-400">
+            Svi učenici bit će uključeni u ovaj zadatak.
           </div>
         </div>
       )}
@@ -200,7 +200,7 @@ function RouteComponent() {
           disabled={saveMutation.isPending}
           className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {saveMutation.isPending ? 'Saving...' : 'Save'}
+          {saveMutation.isPending ? 'Spremanje...' : 'Spremi'}
         </button>
         <button
           onClick={() => navigate({
@@ -209,10 +209,10 @@ function RouteComponent() {
           })}
           className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Cancel
+          Odustani
         </button>
         {saveMutation.isSuccess && (
-          <span className="self-center text-sm text-green-600">Saved!</span>
+          <span className="self-center text-green-600">Spremljeno!</span>
         )}
         {saveMutation.isError && (
           <span className="self-center text-sm text-red-600">

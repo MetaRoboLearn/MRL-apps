@@ -84,14 +84,14 @@ function RouteComponent() {
 
   const columns = useMemo(() => [
     columnHelper.accessor('group_id', { header: 'ID', cell: (info) => info.getValue() }),
-    columnHelper.accessor('group_name', { header: 'Group name', cell: (info) => info.getValue() }),
-    columnHelper.accessor('created_at', { header: 'Created at', cell: (info) => new Date(info.getValue()).toLocaleString() }),
+    columnHelper.accessor('group_name', { header: 'Naziv grupe', cell: (info) => info.getValue() }),
+    columnHelper.accessor('created_at', { header: 'Datum stvaranja', cell: (info) => new Date(info.getValue()).toLocaleString() }),
     ...(isAdmin ? [columnHelper.display({
       id: 'created_by',
-      header: 'Created by',
+      header: 'Stvorio',
       cell: ({ row }) => {
         const creator = creatorById.get(row.original.created_by ?? -1)
-        return creator ? `${creator.first_name} ${creator.last_name}` : row.original.created_by ? `User #${row.original.created_by}` : '—'
+        return creator ? `${creator.first_name} ${creator.last_name}` : row.original.created_by ? `Korisnik #${row.original.created_by}` : '—'
       },
     })] : []),
     columnHelper.display({
@@ -102,7 +102,7 @@ function RouteComponent() {
           onClick={() => navigate({ to: '/admin/users/groups/$groupId', params: { groupId: row.original.group_id.toString() } })}
           className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-md transition-colors"
         >
-          View group
+          Pregledaj grupu
         </button>
       ),
     }),
@@ -121,34 +121,34 @@ function RouteComponent() {
   )
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Groups</h1>
+    <div className="readable-content p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Grupe</h1>
         <button
           onClick={() => navigate({ to: '/admin/users/groups/new' })}
           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium"
         >
-          + Add Group
+          + Dodaj grupu
         </button>
       </div>
 
-      <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
-            <label className="block text-sm font-medium mb-1">Search</label>
+            <label className="mb-1 block font-medium">Pretraživanje</label>
             <div className="flex gap-2">
               <input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
                 onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
-                placeholder="Search groups..."
+                placeholder="Pretraži grupe..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
               />
-              <button onClick={handleSearch} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium">Search</button>
+              <button onClick={handleSearch} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium">Pretraži</button>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Results per page</label>
+            <label className="mb-1 block font-medium">Rezultata po stranici</label>
             <select
               value={search.limit}
               onChange={(event) => updateSearch({ limit: Number(event.target.value), skip: 0 })}
@@ -158,24 +158,24 @@ function RouteComponent() {
             </select>
           </div>
           <div className="flex items-end">
-            <label className="flex items-center gap-2 text-sm font-medium">
+              <label className="flex items-center gap-2 font-medium">
               <input
                 type="checkbox"
                 checked={search.order_by_group_name}
                 onChange={(event) => updateSearch({ order_by_group_name: event.target.checked, skip: 0 })}
               />
-              Order by Group name
+              Poredaj po nazivu grupe
             </label>
           </div>
           {isAdmin && (
             <div>
-              <label className="block text-sm font-medium mb-1">Created by</label>
+              <label className="mb-1 block font-medium">Stvorio</label>
               <select
                 value={search.created_by ?? ''}
                 onChange={(event) => updateSearch({ created_by: event.target.value ? Number(event.target.value) : undefined, skip: 0 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
-                <option value="">All creators</option>
+                <option value="">Svi stvaratelji</option>
                 {creatorOptions.map((creator) => <option key={creator.id} value={creator.id}>{creator.first_name} {creator.last_name}</option>)}
               </select>
             </div>
@@ -183,9 +183,9 @@ function RouteComponent() {
           <div className="flex items-end">
             <button
               onClick={() => { setSearchInput(''); navigate({ search: {} }) }}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm font-medium"
+              className="rounded-md bg-gray-200 px-4 py-2 font-medium hover:bg-gray-300"
             >
-              Reset filters
+              Poništi filtere
             </button>
           </div>
         </div>
@@ -202,7 +202,7 @@ function RouteComponent() {
           </thead>
           <tbody>
             {table.getRowModel().rows.length === 0 ? (
-              <tr><td colSpan={columns.length} className="border border-gray-300 px-4 py-8 text-center text-gray-500">No groups found.</td></tr>
+              <tr><td colSpan={columns.length} className="border border-gray-300 px-4 py-8 text-center text-gray-500">Nema pronađenih grupa.</td></tr>
             ) : table.getRowModel().rows.map((row) => (
               <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                 {row.getVisibleCells().map((cell) => <td key={cell.id} className="border border-gray-300 px-4 py-2">{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}
@@ -212,11 +212,11 @@ function RouteComponent() {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <div className="text-sm text-gray-600">Showing {totalFilteredGroups === 0 ? 0 : search.skip + 1} - {Math.min(search.skip + search.limit, totalFilteredGroups)} of {totalFilteredGroups}</div>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="text-gray-600">Prikazano {totalFilteredGroups === 0 ? 0 : search.skip + 1} - {Math.min(search.skip + search.limit, totalFilteredGroups)} od {totalFilteredGroups}</div>
         <div className="flex gap-2">
-          <button onClick={() => updateSearch({ skip: Math.max(0, search.skip - search.limit) })} disabled={search.skip === 0} className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed">Previous</button>
-          <button onClick={() => updateSearch({ skip: search.skip + search.limit })} disabled={search.skip + search.limit >= totalFilteredGroups} className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed">Next</button>
+          <button onClick={() => updateSearch({ skip: Math.max(0, search.skip - search.limit) })} disabled={search.skip === 0} className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed">Prethodna</button>
+          <button onClick={() => updateSearch({ skip: search.skip + search.limit })} disabled={search.skip + search.limit >= totalFilteredGroups} className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed">Sljedeća</button>
         </div>
       </div>
     </div>

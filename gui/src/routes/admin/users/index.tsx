@@ -41,26 +41,32 @@ export const Route = createFileRoute('/admin/users/')({
 
 const columnHelper = createColumnHelper<User>()
 
+const roleLabel = (role: string) => ({
+  admin: 'Administrator',
+  teacher: 'Nastavnik',
+  student: 'Učenik',
+}[role.toLowerCase()] || capitalizeFirstLetter(role))
+
 const columns = [
   columnHelper.accessor('id', {
     header: 'ID',
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('username', {
-    header: 'Username',
+    header: 'Korisničko ime',
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('first_name', {
-    header: 'First Name',
+    header: 'Ime',
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('last_name', {
-    header: 'Last Name',
+    header: 'Prezime',
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('role_name', {
-    header: 'Role',
-    cell: info => capitalizeFirstLetter(info.getValue()),
+    header: 'Uloga',
+    cell: info => roleLabel(info.getValue()),
   }),
   columnHelper.display({
     id: 'group_assignment',
@@ -70,17 +76,17 @@ const columns = [
       : '—',
   }),
   columnHelper.accessor('last_login', {
-    header: 'Last Login',
+    header: 'Zadnja prijava',
     cell: info => {
       const value = info.getValue();
-      return value ? formatLocalDateTime(value) : 'Never';
+      return value ? formatLocalDateTime(value) : 'Nikad';
     },
   }),
   columnHelper.accessor('active', {
-    header: 'Active',
+    header: 'Aktivan',
     cell: info => (
       <span className={info.getValue() ? 'text-green-600' : 'text-red-600'}>
-        {info.getValue() ? 'Yes' : 'No'}
+        {info.getValue() ? 'Da' : 'Ne'}
       </span>
     ),
   }),
@@ -116,49 +122,49 @@ function RouteComponent() {
   };
 
   if (status === "error") {
-    return <div>Error: {error.message}</div>;
+    return <div className="p-6 text-red-700" role="alert">Pogreška: {error.message}</div>;
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Users</h1>
+    <div className="readable-content p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Korisnici</h1>
         <button
           onClick={() => navigate({ to: '/admin/users/new' })}
           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium flex items-center gap-2"
         >
           <span>+</span>
-          Add User
+          Dodaj korisnika
         </button>
       </div>
 
       {/* Filter Controls */}
-      <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {/* Search */}
           <div className="lg:col-span-2">
-            <label className="block text-sm font-medium mb-1">Search</label>
+            <label className="mb-1 block font-medium">Pretraživanje</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Search users..."
+                placeholder="Pretraži korisnike..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
               />
               <button
                 onClick={handleSearch}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium"
               >
-                Search
+                Pretraži
               </button>
             </div>
           </div>
 
           {/* Role */}
           <div>
-            <label className="block text-sm font-medium mb-1">Role</label>
+            <label className="mb-1 block font-medium">Uloga</label>
             <select
               value={search.role_id || ''}
               onChange={(e) => {
@@ -171,10 +177,10 @@ function RouteComponent() {
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="">All Roles</option>
-              <option value="1">Admin</option>
-              <option value="2">Teacher</option>
-              <option value="3">Student</option>
+              <option value="">Sve uloge</option>
+              <option value="1">Administrator</option>
+              <option value="2">Nastavnik</option>
+              <option value="3">Učenik</option>
             </select>
           </div>
 
@@ -197,7 +203,7 @@ function RouteComponent() {
 
           {/* Active Only */}
           <div>
-            <label className="block text-sm font-medium mb-1">Status</label>
+            <label className="mb-1 block font-medium">Status</label>
             <select
               value={search.active_only === undefined ? '' : search.active_only.toString()}
               onChange={(e) => updateSearch({
@@ -205,15 +211,15 @@ function RouteComponent() {
               })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="">All Users</option>
-              <option value="true">Active Only</option>
-              <option value="false">Inactive Only</option>
+              <option value="">Svi korisnici</option>
+              <option value="true">Samo aktivni</option>
+              <option value="false">Samo neaktivni</option>
             </select>
           </div>
 
           {/* Limit */}
           <div>
-            <label className="block text-sm font-medium mb-1">Results per page</label>
+            <label className="mb-1 block font-medium">Rezultata po stranici</label>
             <select
               value={search.limit}
               onChange={(e) => updateSearch({ limit: parseInt(e.target.value) })}
@@ -235,7 +241,7 @@ function RouteComponent() {
                 onChange={(e) => updateSearch({ order_by_username: e.target.checked })}
                 className="rounded border-gray-300"
               />
-              <span className="text-sm font-medium">Order by username</span>
+              <span className="font-medium">Poredaj po korisničkom imenu</span>
             </label>
           </div>
 
@@ -246,9 +252,9 @@ function RouteComponent() {
                 setSearchInput('');
                 navigate({ search: {} });
               }}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm font-medium"
+              className="rounded-md bg-gray-200 px-4 py-2 font-medium hover:bg-gray-300"
             >
-              Reset Filters
+              Poništi filtere
             </button>
           </div>
         </div>
@@ -282,7 +288,7 @@ function RouteComponent() {
                 <td colSpan={columns.length} className="border border-gray-300 px-4 py-8 text-center text-gray-500">
                   {search.group_assignment === 'unassigned'
                     ? 'Nema neraspoređenih učenika.'
-                    : 'Nema korisnika za odabrane filtre.'}
+                    : 'Nema korisnika za odabrane filtere.'}
                 </td>
               </tr>
             ) : table.getRowModel().rows.map(row => (
@@ -308,7 +314,7 @@ function RouteComponent() {
       {/* Pagination Controls */}
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-gray-600">
-          Showing {search.skip + 1} - {Math.min(search.skip + search.limit, (data?.length || 0) + search.skip)} of results
+          Prikazano {search.skip + 1} - {Math.min(search.skip + search.limit, (data?.length || 0) + search.skip)} rezultata
         </div>
         <div className="flex gap-2">
           <button
@@ -316,14 +322,14 @@ function RouteComponent() {
             disabled={search.skip === 0}
             className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Previous
+            Prethodna
           </button>
           <button
             onClick={() => updateSearch({ skip: search.skip + search.limit })}
             disabled={(data?.length || 0) < search.limit}
             className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Next
+            Sljedeća
           </button>
         </div>
       </div>

@@ -30,8 +30,8 @@ function RouteComponent() {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Create Activity</h1>
+    <div className="readable-content mx-auto w-full max-w-2xl p-6 md:p-8">
+      <h1 className="mb-6 text-2xl font-bold">Stvori aktivnost</h1>
       <ActivityForm
         onSubmit={handleSubmit}
         isLoading={mutation.isPending}

@@ -72,8 +72,8 @@ function RouteComponent() {
   }
 
   return (
-    <div className="p-4 w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Edit Activity Task</h1>
+    <div className="readable-content mx-auto w-full max-w-3xl p-6 md:p-8">
+      <h1 className="mb-6 text-2xl font-bold">Uredi zadatak aktivnosti</h1>
       <ActivityTaskForm
         initialData={{
           task_id: activityTask.task_id,

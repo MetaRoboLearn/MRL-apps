@@ -274,7 +274,7 @@ def generate_llm_feedback(session, user_started_task_id: int) -> dict[str, Any]:
     except Exception:
         logger.exception("LLM feedback generation failed")
         return {
-            "error": "Failed to generate feedback",
+            "error": "Generiranje povratne informacije nije uspjelo.",
             "error_code": "provider",
             "status_code": 502,
         }

@@ -100,20 +100,20 @@ export function BadgeCatalog({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="badge-catalog-title"
-        className="mx-auto max-w-4xl rounded-md bg-white p-6 shadow-2xl"
+        className="readable-content mx-auto max-w-4xl rounded-md bg-white p-6 shadow-2xl sm:p-8"
       >
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 id="badge-catalog-title" className="text-2xl font-bold text-gray-900">Zbirka znački</h2>
           <button type="button" onClick={onClose} className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">Zatvori</button>
         </div>
-        <div className="mb-5 flex gap-2">
+        <div className="mb-6 flex flex-wrap gap-3">
           {filterOptions.map(({ value, label }) => (
             <button
               key={value}
               type="button"
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
-              className={`rounded-md px-3 py-2 text-sm font-medium ${filter === value ? 'bg-turquoise-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+              className={`rounded-md px-4 py-2 font-medium ${filter === value ? 'bg-turquoise-500 text-white' : 'bg-gray-100 text-gray-700'}`}
             >
               {label}
             </button>

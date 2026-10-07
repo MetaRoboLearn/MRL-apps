@@ -46,7 +46,7 @@ def create_group():
     data = request.get_json(silent=True) or {}
     group_name = data.get("group_name")
     if not isinstance(group_name, str) or not group_name.strip():
-        return jsonify({"error": "group_name is required"}), 400
+        return jsonify({"error": "group_name je obavezan."}), 400
 
     with db_session() as session:
         group = GroupRepository(session).create(
@@ -62,9 +62,9 @@ def get_group(group_id: int):
     with db_session() as session:
         group = GroupRepository(session).get_by_id(group_id)
         if not group:
-            return jsonify({"error": "Group not found"}), 404
+            return jsonify({"error": "Grupa nije pronađena."}), 404
         if not owns_group(current_user, group):
-            return jsonify({"error": "You do not have access to this group"}), 403
+            return jsonify({"error": "Nemate pristup ovoj grupi."}), 403
 
         memberships = UserGroupsRepository(session).list_by_group(group_id)
         return jsonify({
@@ -89,15 +89,15 @@ def update_group(group_id: int):
     data = request.get_json(silent=True) or {}
     group_name = data.get("group_name")
     if not isinstance(group_name, str) or not group_name.strip():
-        return jsonify({"error": "group_name is required"}), 400
+        return jsonify({"error": "group_name je obavezan."}), 400
 
     with db_session() as session:
         repo = GroupRepository(session)
         group = repo.get_by_id(group_id)
         if not group:
-            return jsonify({"error": "Group not found"}), 404
+            return jsonify({"error": "Grupa nije pronađena."}), 404
         if not owns_group(current_user, group):
-            return jsonify({"error": "You do not have access to this group"}), 403
+            return jsonify({"error": "Nemate pristup ovoj grupi."}), 403
         group = repo.update_name(
             group_id,
             group_name=group_name.strip(),
@@ -113,9 +113,9 @@ def delete_group(group_id: int):
         group_repo = GroupRepository(session)
         group = group_repo.get_by_id(group_id)
         if not group:
-            return jsonify({"error": "Group not found"}), 404
+            return jsonify({"error": "Grupa nije pronađena."}), 404
         if not owns_group(current_user, group):
-            return jsonify({"error": "You do not have access to this group"}), 403
+            return jsonify({"error": "Nemate pristup ovoj grupi."}), 403
 
         group_repo.delete_group(group_id)
 

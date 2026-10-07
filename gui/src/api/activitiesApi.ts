@@ -8,7 +8,7 @@ export const getActivityById = async (activityId: string) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch activity');
+    throw new Error(error.error || 'Aktivnost nije moguće učitati.');
   }
 
   return response.json();
@@ -41,7 +41,7 @@ export const getOwnedActivitiesOverview = async (): Promise<OwnedActivityOption[
   })
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to fetch owned activities')
+    throw new Error(error.error || 'Vlastite aktivnosti nije moguće učitati.')
   }
   return response.json()
 }
@@ -68,7 +68,7 @@ export const createActivity = async (data: CreateActivityRequest) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to create activity');
+    throw new Error(error.error || 'Stvaranje aktivnosti nije uspjelo.');
   }
 
   return response.json();
@@ -84,7 +84,7 @@ export const updateActivity = async ({ id, ...data }: CreateActivityRequest & { 
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to update activity');
+    throw new Error(error.error || 'Ažuriranje aktivnosti nije uspjelo.');
   }
 
   return response.json();
@@ -98,7 +98,7 @@ export const deleteActivity = async (activityId: string) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to delete activity');
+    throw new Error(error.error || 'Brisanje aktivnosti nije uspjelo.');
   }
 
   return response.json();
@@ -111,7 +111,7 @@ export const getActivityTasks = async (activityId: string) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch activity tasks');
+    throw new Error(error.error || 'Zadatke aktivnosti nije moguće učitati.');
   }
 
   return response.json();
@@ -124,7 +124,7 @@ export const getActivityTaskById = async (activityTaskId: string) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch activity task');
+    throw new Error(error.error || 'Zadatak aktivnosti nije moguće učitati.');
   }
 
   return response.json();
@@ -151,7 +151,7 @@ export const createActivityTask = async (data: {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to create activity task');
+    throw new Error(error.error || 'Stvaranje zadatka aktivnosti nije uspjelo.');
   }
 
   return response.json();
@@ -177,7 +177,7 @@ export const updateActivityTask = async ({ id, ...data }: {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to update activity task');
+    throw new Error(error.error || 'Ažuriranje zadatka aktivnosti nije uspjelo.');
   }
 
   return response.json();
@@ -191,7 +191,7 @@ export const moveActivityTaskUp = async (activityTaskId: number, activityId: str
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to move task');
+    throw new Error(error.error || 'Pomicanje zadatka nije uspjelo.');
   }
 
   return response.json();
@@ -205,7 +205,7 @@ export const moveActivityTaskDown = async (activityTaskId: number, activityId: s
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to move task');
+    throw new Error(error.error || 'Pomicanje zadatka nije uspjelo.');
   }
 
   return response.json();
@@ -219,7 +219,7 @@ export const deleteActivityTask = async (activityTaskId: number) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to delete activity task');
+    throw new Error(error.error || 'Brisanje zadatka aktivnosti nije uspjelo.');
   }
 
   return response.json();
@@ -231,7 +231,7 @@ export const getAvailableActivities = async (): Promise<AvailableActivity[]> => 
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch activities: ${response.status}`);
+    throw new Error(`Aktivnosti nije moguće učitati (status ${response.status}).`);
   }
 
   return response.json();
@@ -253,7 +253,7 @@ export const getActivityTaskStudents = async (
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch students');
+    throw new Error(error.error || 'Učenike nije moguće učitati.');
   }
 
   return response.json();
@@ -275,7 +275,7 @@ export const setActivityTaskStudents = async (
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to update students');
+    throw new Error(error.error || 'Ažuriranje učenika nije uspjelo.');
   }
 
   return response.json();

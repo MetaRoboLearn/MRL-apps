@@ -46,28 +46,28 @@ const columns = [
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('title', {
-    header: 'Title',
+    header: 'Naslov',
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('description', {
-    header: 'Description',
+    header: 'Opis',
     cell: info => info.getValue() || '—',
   }),
   columnHelper.display({
     id: 'dimensions',
-    header: 'Dimensions',
+    header: 'Dimenzije',
     cell: ({ row }) => `${row.original.size_x} x ${row.original.size_z}`,
   }),
   columnHelper.accessor('active', {
-    header: 'Active',
+    header: 'Aktivan',
     cell: info => (
       <span className={info.getValue() ? 'text-green-600' : 'text-red-600'}>
-        {info.getValue() ? 'Yes' : 'No'}
+        {info.getValue() ? 'Da' : 'Ne'}
       </span>
     ),
   }),
   columnHelper.accessor('creator', {
-    header: 'Created By',
+    header: 'Stvorio',
     cell: info => {
       const creator = info.getValue();
       if (!creator) return '—';
@@ -80,7 +80,7 @@ const columns = [
     },
   }),
   columnHelper.accessor('created_at', {
-    header: 'Created At',
+    header: 'Stvoreno',
     cell: (info) => formatLocalDateTime(info.getValue()),
   }),
 ]
@@ -115,49 +115,49 @@ function RouteComponent() {
   };
 
   if (status === "error") {
-    return <div>Error: {error.message}</div>;
+    return <div className="p-6 text-red-700" role="alert">Pogreška: {error.message}</div>;
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Tasks</h1>
+    <div className="readable-content p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Zadaci</h1>
         <button
           onClick={() => navigate({ to: '/admin/tasks/new' })}
           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium flex items-center gap-2"
         >
           <span>+</span>
-          Add Task
+          Dodaj zadatak
         </button>
       </div>
 
       {/* Filter Controls */}
-      <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {/* Search */}
           <div className="lg:col-span-2">
-            <label className="block text-sm font-medium mb-1">Search</label>
+            <label className="mb-1 block font-medium">Pretraživanje</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Search tasks..."
+                placeholder="Pretraži zadatke..."
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
               />
               <button
                 onClick={handleSearch}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium"
               >
-                Search
+                Pretraži
               </button>
             </div>
           </div>
 
           {/* Active Only */}
           <div>
-            <label className="block text-sm font-medium mb-1">Status</label>
+              <label className="mb-1 block font-medium">Status</label>
             <select
               value={search.active_only === undefined ? '' : search.active_only.toString()}
               onChange={(e) => updateSearch({
@@ -165,15 +165,15 @@ function RouteComponent() {
               })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="">All Tasks</option>
-              <option value="true">Active Only</option>
-              <option value="false">Inactive Only</option>
+              <option value="">Svi zadaci</option>
+              <option value="true">Samo aktivni</option>
+              <option value="false">Samo neaktivni</option>
             </select>
           </div>
 
           {/* Limit */}
           <div>
-            <label className="block text-sm font-medium mb-1">Results per page</label>
+            <label className="mb-1 block font-medium">Rezultata po stranici</label>
             <select
               value={search.limit}
               onChange={(e) => updateSearch({ limit: parseInt(e.target.value) })}
@@ -195,7 +195,7 @@ function RouteComponent() {
                 onChange={(e) => updateSearch({ order_by_title: e.target.checked })}
                 className="rounded border-gray-300"
               />
-              <span className="text-sm font-medium">Order by title</span>
+              <span className="font-medium">Poredaj po naslovu</span>
             </label>
           </div>
 
@@ -208,7 +208,7 @@ function RouteComponent() {
               }}
               className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm font-medium"
             >
-              Reset Filters
+              Poništi filtere
             </button>
           </div>
         </div>
@@ -260,7 +260,7 @@ function RouteComponent() {
       {/* Pagination Controls */}
       <div className="mt-4 flex items-center justify-between">
         <div className="text-sm text-gray-600">
-          Showing {search.skip + 1} - {Math.min(search.skip + search.limit, (data?.length || 0) + search.skip)} of results
+          Prikazano {search.skip + 1} - {Math.min(search.skip + search.limit, (data?.length || 0) + search.skip)} rezultata
         </div>
         <div className="flex gap-2">
           <button
@@ -268,14 +268,14 @@ function RouteComponent() {
             disabled={search.skip === 0}
             className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Previous
+            Prethodna
           </button>
           <button
             onClick={() => updateSearch({ skip: search.skip + search.limit })}
             disabled={(data?.length || 0) < search.limit}
             className="px-4 py-2 bg-blue-500 text-white rounded-md disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Next
+            Sljedeća
           </button>
         </div>
       </div>

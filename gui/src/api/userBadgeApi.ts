@@ -5,7 +5,7 @@ export const getUserBadges = async (userId: string): Promise<UserBadgeEntry[]> =
   const response = await fetch(`/api/users/${userId}/badges`, {
     credentials: 'include',
   })
-  if (!response.ok) throw new Error('Failed to fetch user badges')
+  if (!response.ok) throw new Error('Značke korisnika nije moguće učitati.')
   return response.json()
 }
 
@@ -21,8 +21,8 @@ export const assignBadge = async (data: {
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to assign badge')
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Dodjela značke nije uspjela.')
   }
   return response.json()
 }
@@ -33,8 +33,8 @@ export const removeBadge = async (userBadgeId: number) => {
     method: 'DELETE',
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to remove badge')
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Uklanjanje značke nije uspjelo.')
   }
   return response.json()
 }
@@ -47,8 +47,8 @@ export const updateBadgeComment = async (userBadgeId: number, comment: string): 
     body: JSON.stringify({ comment }),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to update badge comment')
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Spremanje komentara značke nije uspjelo.')
   }
   return response.json()
 }
@@ -59,6 +59,6 @@ export const getMyBadges = async (
   const response = await fetch(`/api/user-badges/my?filter=${filter}`, {
     credentials: 'include',
   })
-  if (!response.ok) throw new Error('Failed to fetch badges')
+  if (!response.ok) throw new Error('Značke nije moguće učitati.')
   return response.json()
 }

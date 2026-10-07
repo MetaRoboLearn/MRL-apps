@@ -54,14 +54,15 @@ export function BadgeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="readable-content space-y-5">
       {error && (
-        <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>
+        <div className="rounded-md bg-red-100 p-3 text-red-700" role="alert" aria-live="assertive">{error}</div>
       )}
 
       <div>
-        <label className="block text-sm font-medium mb-1">Title *</label>
+        <label htmlFor="badge-title" className="mb-1 block font-medium">Naslov *</label>
         <input
+          id="badge-title"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -71,8 +72,9 @@ export function BadgeForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
+        <label htmlFor="badge-description" className="mb-1 block font-medium">Opis</label>
         <textarea
+          id="badge-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
@@ -81,8 +83,9 @@ export function BadgeForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Value *</label>
+        <label htmlFor="badge-value" className="mb-1 block font-medium">Vrijednost *</label>
         <input
+          id="badge-value"
           type="number"
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -92,8 +95,9 @@ export function BadgeForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Linked Task *</label>
+        <label htmlFor="badge-activity-task" className="mb-1 block font-medium">Povezani zadatak *</label>
         <select
+          id="badge-activity-task"
           value={activityTaskId}
           onChange={(e) => setActivityTaskId(e.target.value)}
           required={!badge}
@@ -101,38 +105,38 @@ export function BadgeForm({
           className="w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100 disabled:text-gray-500"
         >
           <option value="">
-            {taskOptionsLoading ? 'Loading tasks...' : 'Select a task'}
+            {taskOptionsLoading ? 'Učitavanje zadataka...' : 'Odaberi zadatak'}
           </option>
           {badge && !taskOptions.some((task) => task.activity_task_id === badge.relevant_activity_task_id) && (
             <option value={badge.relevant_activity_task_id}>
-              Linked activity task #{badge.relevant_activity_task_id}
+              Povezani zadatak aktivnosti #{badge.relevant_activity_task_id}
             </option>
           )}
           {taskOptions.map((task) => (
             <option key={task.activity_task_id} value={task.activity_task_id}>
-              {task.activity_title} - {task.task_title || `Task #${task.activity_task_id}`}
+              {task.activity_title} - {task.task_title || `Zadatak #${task.activity_task_id}`}
             </option>
           ))}
         </select>
         {!taskOptionsLoading && taskOptions.length === 0 && (
-          <p className="mt-1 text-sm text-gray-500">No eligible activity tasks found.</p>
+          <p className="mt-1 text-gray-500">Nema dostupnih zadataka aktivnosti.</p>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">
-          Image {badge ? '' : '*'}
+        <label className="mb-1 block font-medium">
+          Slika {badge ? '' : '*'}
         </label>
         <label className="relative flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
           {previewUrl ? (
             <div className="relative group">
               <img
                 src={previewUrl}
-                alt="Badge preview"
+                alt="Pretpregled značke"
                 className="h-28 w-28 object-contain rounded-md"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-white text-sm font-medium">Change</span>
+                <span className="text-white font-medium">Promijeni</span>
               </div>
             </div>
           ) : (
@@ -140,8 +144,8 @@ export function BadgeForm({
               <svg className="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 16V4m0 0L8 8m4-4l4 4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" />
               </svg>
-              <span className="text-sm font-medium">Click to upload</span>
-              <span className="text-xs text-gray-400 mt-1">PNG, JPG, GIF, SVG, WEBP</span>
+              <span className="font-medium">Kliknite za učitavanje</span>
+              <span className="mt-1 text-sm text-gray-400">PNG, JPG, GIF, SVG, WEBP</span>
             </div>
           )}
           <input
@@ -161,7 +165,7 @@ export function BadgeForm({
           disabled={isLoading}
           className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Saving...' : badge ? 'Update Badge' : 'Create Badge'}
+          {isLoading ? 'Spremanje...' : badge ? 'Ažuriraj značku' : 'Stvori značku'}
         </button>
         <button
           type="button"
@@ -169,7 +173,7 @@ export function BadgeForm({
           disabled={isLoading}
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium disabled:cursor-not-allowed"
         >
-          Cancel
+          Odustani
         </button>
       </div>
     </form>

@@ -23,7 +23,7 @@ def _activity_task_access_error(activity_task):
         return None
     if activity_task.activity and owns_activity(current_user, activity_task.activity):
         return None
-    return jsonify({"error": "You do not have access to this activity task"}), 403
+    return jsonify({"error": "Nemate pristup ovom zadatku aktivnosti."}), 403
 
 
 # ---------- GET STUDENTS + SELECTION STATE ----------
@@ -38,7 +38,7 @@ def get_students(activity_task_id: int):
         at_repo = ActivityTaskRepository(session)
         at = at_repo.get_by_id(activity_task_id)
         if not at:
-            return jsonify({"error": "ActivityTask not found"}), 404
+            return jsonify({"error": "Zadatak aktivnosti nije pronađen."}), 404
         access_error = _activity_task_access_error(at)
         if access_error:
             return access_error
@@ -78,22 +78,22 @@ def set_students(activity_task_id: int):
 
     student_mode = data.get("student_mode")
     if student_mode not in ("all", "include", "exclude"):
-        return jsonify({"error": "student_mode must be 'all', 'include', or 'exclude'"}), 400
+        return jsonify({"error": "student_mode mora biti 'all', 'include' ili 'exclude'."}), 400
 
     user_ids = data.get("user_ids", [])
     if not isinstance(user_ids, list) or any(
         not isinstance(user_id, int) or isinstance(user_id, bool)
         for user_id in user_ids
     ):
-        return jsonify({"error": "user_ids must be a list of integer user IDs"}), 400
+        return jsonify({"error": "user_ids mora biti popis cijelih ID-jeva korisnika."}), 400
     if len(user_ids) != len(set(user_ids)):
-        return jsonify({"error": "user_ids must not contain duplicates"}), 400
+        return jsonify({"error": "user_ids ne smije sadržavati duplikate."}), 400
 
     with db_session() as session:
         at_repo = ActivityTaskRepository(session)
         at = at_repo.get_by_id(activity_task_id)
         if not at:
-            return jsonify({"error": "ActivityTask not found"}), 404
+            return jsonify({"error": "Zadatak aktivnosti nije pronađen."}), 404
         access_error = _activity_task_access_error(at)
         if access_error:
             return access_error
@@ -108,7 +108,7 @@ def set_students(activity_task_id: int):
             invalid_ids = sorted(set(user_ids) - assignable_ids)
             if invalid_ids:
                 return jsonify({
-                    "error": "One or more users are not assignable students",
+                    "error": "Jedan ili više korisnika nisu učenici kojima je moguće dodijeliti zadatak.",
                     "user_ids": invalid_ids,
                 }), 400
 

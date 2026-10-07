@@ -78,7 +78,7 @@ def get_activity_task(activity_task_id: int):
         repo = ActivityTaskRepository(session)
         at = repo.get_by_id(activity_task_id)
         if not at:
-            return jsonify({"error": "Activity task not found"}), 404
+            return jsonify({"error": "Zadatak aktivnosti nije pronađen."}), 404
         return jsonify({
             "activity_task_id": at.id,
             "activity_id": at.activity_id,
@@ -146,7 +146,7 @@ def create_activity_task():
     required = ("activity_id", "task_id", "type_id", "order")
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
     if "programming_element_ids" in data and not isinstance(data["programming_element_ids"], list):
         return jsonify({"error": "programming_element_ids must be a list"}), 400
 
@@ -184,7 +184,7 @@ def create_activity_task():
             return jsonify({"error": str(error)}), 400
         except IntegrityError:
             session.rollback()
-            return jsonify({"error": "Could not save activity-task programming elements"}), 409
+            return jsonify({"error": "Programske elemente zadatka aktivnosti nije moguće spremiti."}), 409
         return jsonify(_activity_task_to_dict(at)), 201
 
 
@@ -198,7 +198,7 @@ def update_activity_task(activity_task_id: int):
     allowed = {"preview", "instructions", "activity_id", "task_id", "type_id", "order", "is_logged", "allows_robot", "difficulty", "programming_element_ids"}
     unknown = [k for k in data.keys() if k not in allowed]
     if unknown:
-        return jsonify({"error": "Unknown fields", "unknown": unknown}), 400
+        return jsonify({"error": "Nepoznata polja.", "unknown": unknown}), 400
 
     with db_session() as session:
         repo = ActivityTaskRepository(session)
@@ -206,7 +206,7 @@ def update_activity_task(activity_task_id: int):
             return jsonify({"error": "programming_element_ids must be a list"}), 400
         at = repo.get_by_id(activity_task_id)
         if not at:
-            return jsonify({"error": "ActivityTask not found"}), 404
+            return jsonify({"error": "Zadatak aktivnosti nije pronađen."}), 404
         association_repo = ActivityTaskProgrammingElementRepository(session)
         try:
             type_id = int(data["type_id"]) if "type_id" in data else cast(int, at.type_id)
@@ -242,7 +242,7 @@ def update_activity_task(activity_task_id: int):
             return jsonify({"error": str(error)}), 400
         except IntegrityError:
             session.rollback()
-            return jsonify({"error": "Could not save activity-task programming elements"}), 409
+            return jsonify({"error": "Programske elemente zadatka aktivnosti nije moguće spremiti."}), 409
 
         return jsonify(_activity_task_to_dict(at)), 200
 
@@ -257,7 +257,7 @@ def delete_activity_task(activity_task_id: int):
         # get activity_id before deleting
         task = repo.get_by_id(activity_task_id)
         if not task:
-            return jsonify({"error": "ActivityTask not found"}), 404
+            return jsonify({"error": "Zadatak aktivnosti nije pronađen."}), 404
 
         activity_id = cast(int, task.activity_id)
         repo.delete(activity_task_id)
@@ -277,7 +277,7 @@ def move_task_up(activity_task_id: int):
         repo = ActivityTaskRepository(session)
         result = repo.swap_order(int(activity_id_raw), activity_task_id, 'up')
         if not result:
-            return jsonify({"error": "Cannot move up"}), 400
+            return jsonify({"error": "Zadatak nije moguće pomaknuti prema gore."}), 400
         return jsonify({"status": "ok"}), 200
 
 
@@ -292,5 +292,5 @@ def move_task_down(activity_task_id: int):
         repo = ActivityTaskRepository(session)
         result = repo.swap_order(int(activity_id_raw), activity_task_id, 'down')
         if not result:
-            return jsonify({"error": "Cannot move down"}), 400
+            return jsonify({"error": "Zadatak nije moguće pomaknuti prema dolje."}), 400
         return jsonify({"status": "ok"}), 200

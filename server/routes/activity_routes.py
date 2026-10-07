@@ -38,7 +38,7 @@ def get_activity(activity_id: int):
         repo = ActivityRepository(session)
         activity = repo.get_with_details(activity_id)
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
 
         return jsonify({
             **_activity_to_dict(activity),
@@ -220,7 +220,7 @@ def create_activity():
     required = ("title", "time_from", "time_to")
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
 
     try:
         time_from = parse_datetime(data["time_from"])
@@ -250,7 +250,7 @@ def update_activity(activity_id: int):
     allowed = {"title", "description", "time_from", "time_to", "active"}
     unknown = [k for k in data.keys() if k not in allowed]
     if unknown:
-        return jsonify({"error": "Unknown fields", "unknown": unknown}), 400
+        return jsonify({"error": "Nepoznata polja.", "unknown": unknown}), 400
 
     # parse datetimes if provided
     try:
@@ -271,7 +271,7 @@ def update_activity(activity_id: int):
             actor_user_id=current_user.id,
         )
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
 
         return jsonify(_activity_to_dict(activity)), 200
 
@@ -284,7 +284,7 @@ def deactivate_activity(activity_id: int):
         repo = ActivityRepository(session)
         activity = repo.deactivate(activity_id, actor_user_id=current_user.id)
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
         return jsonify(_activity_to_dict(activity)), 200
 
 
@@ -296,7 +296,7 @@ def activate_activity(activity_id: int):
         repo = ActivityRepository(session)
         activity = repo.activate(activity_id, actor_user_id=current_user.id)
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
         return jsonify(_activity_to_dict(activity)), 200
 
 
@@ -308,10 +308,10 @@ def delete_activity(activity_id: int):
         at_repo = ActivityTaskRepository(session)
         tasks = at_repo.list_by_activity_id(activity_id=activity_id)
         if tasks:
-            return jsonify({"error": "Cannot delete activity with assigned tasks. Remove all tasks first."}), 400
+            return jsonify({"error": "Aktivnost s dodijeljenim zadacima nije moguće obrisati. Najprije uklonite sve zadatke."}), 400
 
         repo = ActivityRepository(session)
         ok = repo.delete(activity_id)
         if not ok:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
         return jsonify({"deleted": True}), 200

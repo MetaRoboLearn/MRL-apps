@@ -31,11 +31,11 @@ function RouteComponent() {
     setError(undefined)
 
     if (!username.trim()) {
-      setError('Username is required')
+      setError('Korisničko ime je obavezno.')
       return
     }
     if (!password.trim()) {
-      setError('Password is required')
+      setError('Lozinka je obavezna.')
       return
     }
 
@@ -53,7 +53,7 @@ function RouteComponent() {
           <p className="text-dark-neutrals-400 text-center mb-8 mt-4">Prijavi se za nastavak</p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm">
+            <div id="login-error" className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm" role="alert" aria-live="assertive">
               {error}
             </div>
           )}
@@ -68,6 +68,8 @@ function RouteComponent() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? 'login-error' : undefined}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-md focus:outline-none focus:border-sunglow-500 transition"
                 placeholder="Unesi korisničko ime"
               />
@@ -83,6 +85,8 @@ function RouteComponent() {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? 'login-error' : undefined}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-md focus:outline-none focus:border-sunglow-500 transition pr-12"
                   placeholder="Unesi lozinku"
                 />

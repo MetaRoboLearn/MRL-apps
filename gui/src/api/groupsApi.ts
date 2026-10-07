@@ -38,10 +38,10 @@ const requestJson = async <T>(input: RequestInfo, init: RequestInit | undefined,
 }
 
 export const getGroups = (): Promise<GroupSummary[]> =>
-  requestJson('/api/groups/', undefined, 'Failed to fetch groups')
+  requestJson('/api/groups/', undefined, 'Grupe nije moguće učitati.')
 
 export const getGroupById = (groupId: string): Promise<GroupDetails> =>
-  requestJson(`/api/groups/${groupId}`, undefined, 'Failed to fetch group')
+  requestJson(`/api/groups/${groupId}`, undefined, 'Grupu nije moguće učitati.')
 
 export const createGroup = (data: CreateGroupRequest) =>
   requestJson<{ success: true; group_id: number }>(
@@ -51,7 +51,7 @@ export const createGroup = (data: CreateGroupRequest) =>
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     },
-    'Failed to create group',
+    'Stvaranje grupe nije uspjelo.',
   )
 
 export const updateGroup = (groupId: string, data: UpdateGroupRequest): Promise<GroupSummary> =>
@@ -59,7 +59,7 @@ export const updateGroup = (groupId: string, data: UpdateGroupRequest): Promise<
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  }, 'Failed to update group')
+  }, 'Ažuriranje grupe nije uspjelo.')
 
 export const deleteGroup = (groupId: string) =>
-  requestJson<{ success: true }>(`/api/groups/${groupId}`, { method: 'DELETE' }, 'Failed to delete group')
+  requestJson<{ success: true }>(`/api/groups/${groupId}`, { method: 'DELETE' }, 'Brisanje grupe nije uspjelo.')

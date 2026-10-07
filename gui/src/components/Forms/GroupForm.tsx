@@ -22,7 +22,7 @@ export function GroupForm({ initialName = '', submitLabel, isLoading, error, onS
     event.preventDefault()
     const trimmedName = groupName.trim()
     if (!trimmedName) {
-      setValidationError('Group name is required')
+      setValidationError('Naziv grupe je obavezan.')
       return
     }
     setValidationError('')
@@ -30,14 +30,14 @@ export function GroupForm({ initialName = '', submitLabel, isLoading, error, onS
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 max-w-2xl">
+    <form onSubmit={handleSubmit} className="readable-content max-w-2xl rounded-lg border border-gray-200 bg-white p-6">
       {(error || validationError) && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-300 bg-red-100 p-3 text-red-700" role="alert" aria-live="assertive">
           {error || validationError}
         </div>
       )}
       <label htmlFor="group_name" className="block text-sm font-medium mb-1">
-        Group name *
+        Naziv grupe *
       </label>
       <input
         id="group_name"
@@ -53,14 +53,14 @@ export function GroupForm({ initialName = '', submitLabel, isLoading, error, onS
           disabled={isLoading}
           className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Saving...' : submitLabel}
+          {isLoading ? 'Spremanje...' : submitLabel}
         </button>
         <button
           type="button"
           onClick={() => navigate({ to: '/admin/users/groups' })}
           className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Cancel
+          Odustani
         </button>
       </div>
     </form>

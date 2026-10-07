@@ -45,7 +45,7 @@ def get_task(task_id: int):
         repo = TaskRepository(session)
         task = repo.get_by_id(task_id)
         if not task:
-            return jsonify({"error": "Task not found"}), 404
+            return jsonify({"error": "Zadatak nije pronađen."}), 404
         return jsonify(_task_to_dict(task)), 200
 
 
@@ -103,7 +103,7 @@ def create_task():
     required = ("title",)
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
 
     with db_session() as session:
         repo = TaskRepository(session)
@@ -151,7 +151,7 @@ def update_task(task_id: int):
     }
     unknown = [k for k in data.keys() if k not in allowed]
     if unknown:
-        return jsonify({"error": "Unknown fields", "unknown": unknown}), 400
+        return jsonify({"error": "Nepoznata polja.", "unknown": unknown}), 400
 
     # validate boolean
     if "active" in data:
@@ -165,7 +165,7 @@ def update_task(task_id: int):
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
         else:
-            return jsonify({"error": "Invalid value for active"}), 400
+                return jsonify({"error": "Neispravna vrijednost za active."}), 400
     else:
         active_val = None
 
@@ -190,7 +190,7 @@ def update_task(task_id: int):
             actor_user_id=current_user.id,
         )
         if not task:
-            return jsonify({"error": "Task not found"}), 404
+            return jsonify({"error": "Zadatak nije pronađen."}), 404
 
         return jsonify(_task_to_dict(task)), 200
 
@@ -203,7 +203,7 @@ def deactivate_task(task_id: int):
         repo = TaskRepository(session)
         task = repo.deactivate(task_id, actor_user_id=current_user.id)
         if not task:
-            return jsonify({"error": "Task not found"}), 404
+            return jsonify({"error": "Zadatak nije pronađen."}), 404
         return jsonify(_task_to_dict(task)), 200
 
 
@@ -215,7 +215,7 @@ def activate_task(task_id: int):
         repo = TaskRepository(session)
         task = repo.activate(task_id, actor_user_id=current_user.id)
         if not task:
-            return jsonify({"error": "Task not found"}), 404
+            return jsonify({"error": "Zadatak nije pronađen."}), 404
         return jsonify(_task_to_dict(task)), 200
 
 
@@ -227,5 +227,5 @@ def delete_task(task_id: int):
         repo = TaskRepository(session)
         ok = repo.delete(task_id)
         if not ok:
-            return jsonify({"error": "Task not found"}), 404
+            return jsonify({"error": "Zadatak nije pronađen."}), 404
         return jsonify({"deleted": True}), 200

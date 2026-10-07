@@ -44,7 +44,7 @@ export const getGroupAnalytics = async (
   })
 
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to fetch group analytics'))
+    throw new Error(await readError(response, 'Analitiku grupa nije moguće učitati.'))
   }
 
   return response.json()
@@ -59,7 +59,7 @@ export const getStudentPortfolio = async (
   })
 
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to fetch student portfolio'))
+    throw new Error(await readError(response, 'Portfelj učenika nije moguće učitati.'))
   }
 
   return response.json()
@@ -71,7 +71,7 @@ export const getSubmissions = async (): Promise<Submission[]> => {
   })
 
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to fetch submissions'))
+    throw new Error(await readError(response, 'Predaje nije moguće učitati.'))
   }
 
   return response.json()
@@ -89,12 +89,12 @@ export const requestLlmFeedback = async (userStartedTaskId: number): Promise<Llm
     try {
       const payload = await response.json() as { error?: string; code?: string }
       throw new LlmFeedbackError(
-        payload.error || 'Failed to generate feedback',
+        payload.error || 'Nije moguće generirati povratnu informaciju.',
         payload.code || 'provider',
       )
     } catch (error) {
       if (error instanceof LlmFeedbackError) throw error
-      throw new LlmFeedbackError('Failed to generate feedback', 'provider')
+      throw new LlmFeedbackError('Nije moguće generirati povratnu informaciju.', 'provider')
     }
   }
 

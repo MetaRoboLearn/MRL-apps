@@ -7,7 +7,7 @@ export const getRoles = async (): Promise<Role[]> => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch roles');
+    throw new Error(error.error || 'Uloge nije moguće učitati.');
   }
 
   return response.json();
@@ -45,9 +45,9 @@ export const getUserById = async (userId: string): Promise<User> => {
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error('User not found')
+      throw new Error('Korisnik nije pronađen.')
     }
-    throw new Error('Failed to fetch user')
+    throw new Error('Korisnika nije moguće učitati.')
   }
 
   return response.json()
@@ -65,7 +65,7 @@ export const createUser = async (data: CreateUserRequest) => {
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to create user')
+    throw new Error(error.error || 'Stvaranje korisnika nije uspjelo.')
   }
 
   return response.json()
@@ -83,7 +83,7 @@ export const updateUser = async (userId: string, data: UpdateUserRequest): Promi
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to update user')
+    throw new Error(error.error || 'Ažuriranje korisnika nije uspjelo.')
   }
 
   return response.json()
@@ -97,7 +97,7 @@ export const deleteUser = async (userId: string)=> {
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to delete user')
+    throw new Error(error.error || 'Brisanje korisnika nije uspjelo.')
   }
 
   return response.json()
@@ -116,6 +116,6 @@ export const getUsersByIds = async (ids: number[]): Promise<{
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids }),
   })
-  if (!response.ok) throw new Error('Failed to fetch users')
+  if (!response.ok) throw new Error('Korisnike nije moguće učitati.')
   return response.json()
 }

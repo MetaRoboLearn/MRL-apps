@@ -1,6 +1,45 @@
 @import url('https://fonts.googleapis.com/css?family=Nunito:400,700&display=swap');
 @import "tailwindcss";
 
+:root {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+:focus-visible {
+    outline: 3px solid #005456 !important;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 @theme {
     --font-display: Inter, sans-serif;
 
@@ -122,6 +161,26 @@
 
 .analytics-code-highlight-line {
     background-color: #ffeb9e;
+}
+
+.readable-content {
+    font-size: 1.0625rem;
+    line-height: 1.6;
+}
+
+.readable-content .text-sm {
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.readable-content .text-xs {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.readable-content th,
+.readable-content td {
+    line-height: 1.5;
 }
 
 .header {

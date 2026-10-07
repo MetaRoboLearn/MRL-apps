@@ -107,21 +107,21 @@ function RouteComponent() {
   )
 
   return (
-    <main className="min-h-full overflow-y-auto bg-gray-50 p-6">
+    <main className="readable-content min-h-full overflow-y-auto bg-gray-50 p-6 md:p-8">
       <div className="w-full">
-        <h1 className="mb-6 text-3xl font-bold text-gray-900">Group analytics</h1>
+        <h1 className="mb-6 text-3xl font-bold text-gray-900">Analitika grupa</h1>
 
-        <section className="mb-6 rounded-md border border-gray-200 bg-white p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+        <section className="mb-6 rounded-md border border-gray-200 bg-white p-5">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end">
             <SearchableMultiSelect
-              label="Groups"
+              label="Grupe"
               options={groupOptions}
               selectedIds={groupSelection}
               onChange={setGroupSelection}
               loading={groupsQuery.isLoading}
             />
             <SearchableMultiSelect
-              label="Activities"
+              label="Aktivnosti"
               options={activityOptions}
               selectedIds={activityIds}
               onChange={setActivityIds}
@@ -133,7 +133,7 @@ function RouteComponent() {
               onClick={() => analyticsMutation.mutate()}
               className="min-h-10 rounded-md bg-turquoise-500 px-4 py-2 font-semibold text-white hover:bg-turquoise-600 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {analyticsMutation.isPending ? 'Creating...' : 'Create analytics'}
+              {analyticsMutation.isPending ? 'Stvaranje...' : 'Pokreni analitiku'}
             </button>
           </div>
           {analyticsMutation.error && <p className="mt-3 text-sm text-red-600">{analyticsMutation.error.message}</p>}
@@ -145,30 +145,30 @@ function RouteComponent() {
         {result && (
           <div className="space-y-6">
             <section className="rounded-md border border-gray-200 bg-white p-4">
-              <h2 className="mb-3 text-xl font-semibold text-gray-800">Summary</h2>
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">Metric</th><th className="px-3 py-2">Value</th></tr></thead>
+              <h2 className="mb-4 text-xl font-semibold text-gray-800">Sažetak</h2>
+              <table className="min-w-full border-collapse text-left">
+                <thead><tr className="border-b border-gray-200"><th scope="col" className="px-3 py-3">Metrika</th><th scope="col" className="px-3 py-3">Vrijednost</th></tr></thead>
                 <tbody>{result.summary_table.filter((metric) => metric.metric_name === 'students' || metric.metric_name === 'tasks').map((metric) => <tr key={metric.metric_name} className="border-b border-gray-100"><td className="px-3 py-2">{metric.metric_name === 'students' ? 'Učenici' : 'Zadaci'}</td><td className="px-3 py-2">{metric.value}</td></tr>)}</tbody>
               </table>
             </section>
             <details className="rounded-md border border-gray-200 bg-white" open>
-              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Per-task summary</summary>
+              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Sažetak po zadatku</summary>
               <div className="overflow-x-auto border-t border-gray-200 p-4">
                 <table className="min-w-[1100px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="px-3 py-2">Task</th>
-                      <th className="px-3 py-2">Difficulty</th>
-                      <th className="px-3 py-2">Success rate</th>
-                      <th className="px-3 py-2">Avg duration</th>
-                      <th className="px-3 py-2">Median duration</th>
-                      <th className="px-3 py-2">Avg failures</th>
-                      <th className="px-3 py-2">Avg edits to success</th>
+                      <th className="px-3 py-2">Zadatak</th>
+                      <th className="px-3 py-2">Razina strukture</th>
+                      <th className="px-3 py-2">Uspješnost</th>
+                      <th className="px-3 py-2">Prosj. trajanje</th>
+                      <th className="px-3 py-2">Medijan trajanja</th>
+                      <th className="px-3 py-2">Prosj. neuspjeha</th>
+                      <th className="px-3 py-2">Prosj. izmjena do uspjeha</th>
                       <th className="px-3 py-2">Prosjek broja linija</th>
                       <th className="px-3 py-2">Najmanji broj linija</th>
                       <th className="px-3 py-2">Najveći broj linija</th>
-                      <th className="px-3 py-2">Attempting</th>
-                      <th className="px-3 py-2">Successful</th>
+                      <th className="px-3 py-2">Broj pokušaja</th>
+                      <th className="px-3 py-2">Broj uspješnih</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -194,12 +194,12 @@ function RouteComponent() {
             </details>
             <div className="flex flex-col gap-6">
               <details open>
-                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Performance matrix</summary>
-                <AnalyticsImageViewer title="Performance matrix" src={result.heatmap_png} />
+                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Matrica uspješnosti</summary>
+                <AnalyticsImageViewer title="Matrica uspješnosti" src={result.heatmap_png} />
               </details>
               <details open>
-                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Task duration distribution</summary>
-                <AnalyticsImageViewer title="Task duration distribution" src={result.boxplot_png} />
+                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Raspodjela trajanja zadataka</summary>
+                <AnalyticsImageViewer title="Raspodjela trajanja zadataka" src={result.boxplot_png} />
               </details>
             </div>
             <details className="rounded-md border border-gray-200 bg-white" open>
@@ -223,7 +223,7 @@ function RouteComponent() {
                     </select>
                   </label>
                 </div>
-                {studentsQuery.isLoading ? <p>Učitavanje učenika...</p> : studentsQuery.error ? <p className="text-red-600">{studentsQuery.error.message}</p> : orderedStudents.length === 0 ? <p className="text-gray-500">Nema učenika za odabrane filtre.</p> : (
+                {studentsQuery.isLoading ? <p>Učitavanje učenika...</p> : studentsQuery.error ? <p className="text-red-600">{studentsQuery.error.message}</p> : orderedStudents.length === 0 ? <p className="text-gray-500">Nema učenika za odabrane filtere.</p> : (
                   <table className="min-w-full border-collapse text-left text-sm">
                     <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">Ime</th><th className="px-3 py-2">Prezime</th><th className="px-3 py-2">Broj pokretanja</th><th className="px-3 py-2">Ukupno vrijeme</th><th className="px-3 py-2">Uspješnost</th><th className="px-3 py-2" /></tr></thead>
                     <tbody>{orderedStudents.map((student) => {

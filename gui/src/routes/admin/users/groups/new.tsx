@@ -20,9 +20,9 @@ function RouteComponent() {
   })
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Add New Group</h1>
-      <GroupForm submitLabel="Create Group" isLoading={mutation.isPending} error={error} onSubmit={async (groupName) => { await mutation.mutateAsync({ group_name: groupName }) }} />
+    <div className="readable-content mx-auto w-full max-w-2xl p-6 md:p-8">
+      <h1 className="mb-6 text-2xl font-bold">Dodaj novu grupu</h1>
+      <GroupForm submitLabel="Stvori grupu" isLoading={mutation.isPending} error={error} onSubmit={async (groupName) => { await mutation.mutateAsync({ group_name: groupName }) }} />
     </div>
   )
 }

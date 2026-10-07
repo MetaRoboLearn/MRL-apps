@@ -41,25 +41,25 @@ const columns = [
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('image_url', {
-    header: 'Image',
+    header: 'Slika',
     cell: info => (
       <img
         src={info.getValue()}
-        alt=""
+        alt="Značka"
         className="h-25 w-25 object-contain"
       />
     ),
   }),
   columnHelper.accessor('title', {
-    header: 'Title',
+    header: 'Naslov',
     cell: info => info.getValue(),
   }),
   columnHelper.accessor('description', {
-    header: 'Description',
+    header: 'Opis',
     cell: info => info.getValue() || '-',
   }),
   columnHelper.accessor('value', {
-    header: 'Value',
+    header: 'Vrijednost',
     cell: info => info.getValue(),
   }),
 ]
@@ -94,34 +94,34 @@ function RouteComponent() {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Badges</h1>
+    <div className="readable-content p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Značke</h1>
         <button
           onClick={() => navigate({ to: '/admin/badges/new' })}
           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium flex items-center gap-2"
         >
           <span>+</span>
-          Add Badge
+          Dodaj značku
         </button>
       </div>
 
       {/* Search */}
-      <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-5">
         <div className="flex gap-2">
           <input
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search badges..."
+            placeholder="Pretraži značke..."
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
           />
           <button
             onClick={handleSearch}
             className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium"
           >
-            Search
+            Pretraži
           </button>
           <button
             onClick={() => {
@@ -130,7 +130,7 @@ function RouteComponent() {
             }}
             className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
           >
-            Reset
+            Poništi
           </button>
         </div>
       </div>

@@ -119,9 +119,9 @@ def generate_heatmap(dataframe: pd.DataFrame) -> bytes:
         duplicate_count = (values["_student_label"] == label).sum()
         display_labels.append(f"{label} ({student_id})" if duplicate_count > 1 else label)
     plt.yticks(np.arange(matrix.shape[0]), display_labels)
-    plt.xlabel("Task")
-    plt.ylabel("Student")
-    plt.title("Student Performance Matrix")
+    plt.xlabel("Zadatak")
+    plt.ylabel("Učenik")
+    plt.title("Matrica uspješnosti učenika")
     return _png_from_current_figure()
 
 
@@ -178,9 +178,9 @@ def generate_duration_boxplot(processed: pd.DataFrame) -> bytes:
         rotation=45,
         ha="right",
     )
-    axis.set_ylabel("Time Spent (Seconds)")
-    axis.set_xlabel("Task")
-    axis.set_title("Task Duration Distribution")
+    axis.set_ylabel("Provedeno vrijeme (sekunde)")
+    axis.set_xlabel("Zadatak")
+    axis.set_title("Raspodjela trajanja zadataka")
     figure.tight_layout()
     return _png_from_current_figure()
 
@@ -242,9 +242,9 @@ def generate_trajectory(
     plt.scatter(abandoned["timestamp"], abandoned["code_complexity"], marker="v", c="orange", label="Prekinut pokušaj")
     usernames = data.get("username", pd.Series(dtype=object)).dropna().astype(str).str.strip()
     display_name = usernames.iloc[0] if not usernames.empty else str(user_id)
-    plt.xlabel("Timeline")
-    plt.ylabel("Broj linija")
-    plt.title(f"Learning Trajectory: {display_name}")
+    plt.xlabel("Vrijeme")
+    plt.ylabel("Broj linija koda")
+    plt.title(f"Putanja učenja: {display_name}")
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
     plt.legend(loc="best")
     plt.tight_layout()

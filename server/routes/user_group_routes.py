@@ -22,9 +22,9 @@ def require_login():
 def _get_authorized_group(session, group_id):
     group = GroupRepository(session).get_by_id(group_id)
     if not group:
-        return None, (jsonify({"error": "Group not found"}), 404)
+        return None, (jsonify({"error": "Grupa nije pronađena."}), 404)
     if not owns_group(current_user, group):
-        return None, (jsonify({"error": "You do not have access to this group"}), 403)
+        return None, (jsonify({"error": "Nemate pristup ovoj grupi."}), 403)
     return group, None
 
 
@@ -55,9 +55,9 @@ def replace_group_members(group_id: int):
     data = request.get_json(silent=True) or {}
     user_ids = data.get("user_ids")
     if not isinstance(user_ids, list) or any(not isinstance(user_id, int) for user_id in user_ids):
-        return jsonify({"error": "user_ids must be a list of integer user IDs"}), 400
+        return jsonify({"error": "user_ids mora biti popis cijelih ID-jeva korisnika."}), 400
     if len(user_ids) != len(set(user_ids)):
-        return jsonify({"error": "user_ids must not contain duplicates"}), 400
+        return jsonify({"error": "user_ids ne smije sadržavati duplikate."}), 400
 
     with db_session() as session:
         group, error = _get_authorized_group(session, group_id)
@@ -68,7 +68,7 @@ def replace_group_members(group_id: int):
         found_ids = {user.id for user in users}
         missing_ids = sorted(set(user_ids) - found_ids)
         if missing_ids:
-            return jsonify({"error": "One or more users were not found", "user_ids": missing_ids}), 404
+            return jsonify({"error": "Jedan ili više korisnika nisu pronađeni.", "user_ids": missing_ids}), 404
 
         user_groups_repo = UserGroupsRepository(session)
         try:
@@ -79,6 +79,6 @@ def replace_group_members(group_id: int):
             )
         except IntegrityError:
             session.rollback()
-            return jsonify({"error": "Could not update group membership"}), 409
+            return jsonify({"error": "Članstvo grupe nije moguće ažurirati."}), 409
 
         return jsonify({"success": True, "user_ids": user_ids}), 200

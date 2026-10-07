@@ -90,10 +90,10 @@ function RouteComponent() {
     mutationFn: ({ card }: { card: TaskCard }) => requestLlmFeedback(card.user_started_task_id),
   })
 
-  if (portfolioQuery.isLoading) return <main className="p-6">Loading portfolio...</main>
+  if (portfolioQuery.isLoading) return <main className="readable-content p-6" role="status">Učitavanje portfelja...</main>
   if (portfolioQuery.error) return <main className="p-6 text-red-600">{portfolioQuery.error.message}</main>
-  if (!hasValidFilters) return <main className="p-6 text-red-600">Veza nema valjane filtre grupa i aktivnosti. Vratite se na analitiku i ponovno otvorite karticu učenika.</main>
-  if (!portfolioQuery.data) return <main className="p-6">No portfolio data was returned.</main>
+  if (!hasValidFilters) return <main className="p-6 text-red-600">Veza nema valjane filtere grupa i aktivnosti. Vratite se na analitiku i ponovno otvorite karticu učenika.</main>
+  if (!portfolioQuery.data) return <main className="readable-content p-6">Podaci o portfelju nisu dostupni.</main>
 
   const portfolio = portfolioQuery.data
   const student = portfolio.student || studentQuery.data?.[0]
@@ -103,10 +103,10 @@ function RouteComponent() {
   const completed = stats?.tasks_completed ?? portfolio.task_cards.filter((card) => card.status.startsWith('Success')).length
 
   return (
-    <main className="min-h-full overflow-y-auto bg-gray-50 p-6">
+    <main className="readable-content min-h-full overflow-y-auto bg-gray-50 p-6 md:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <header className="rounded-md border border-gray-200 bg-white p-5">
-          <h1 className="text-3xl font-bold text-gray-900">{student ? `${student.first_name} ${student.last_name}` : `Student #${portfolio.student_id}`}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{student ? `${student.first_name} ${student.last_name}` : `Učenik #${portfolio.student_id}`}</h1>
           {student && <p className="mt-1 text-gray-500">@{student.username}</p>}
           <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div><dt className="text-sm text-gray-500">Pokušani zadaci</dt><dd className="text-2xl font-semibold">{attempted}</dd></div>
@@ -115,7 +115,7 @@ function RouteComponent() {
           </dl>
         </header>
         <div className="space-y-5">
-          {portfolio.task_cards.length === 0 ? <section className="rounded-md border border-gray-200 bg-white p-6 text-gray-500">Nema rezultata za odabrane filtre.</section> : portfolio.task_cards.map((card) => (
+          {portfolio.task_cards.length === 0 ? <section className="rounded-md border border-gray-200 bg-white p-6 text-gray-500">Nema rezultata za odabrane filtere.</section> : portfolio.task_cards.map((card) => (
             <StudentTaskCard
               key={card.user_started_task_id}
               card={card}

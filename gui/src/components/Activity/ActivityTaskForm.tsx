@@ -55,10 +55,10 @@ function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
 
   const columns = [
     columnHelper.accessor('id', { header: 'ID', cell: (info) => info.getValue() }),
-    columnHelper.accessor('title', { header: 'Title', cell: (info) => info.getValue() }),
+    columnHelper.accessor('title', { header: 'Naslov', cell: (info) => info.getValue() }),
     columnHelper.display({
       id: 'dimensions',
-      header: 'Dimensions',
+      header: 'Dimenzije',
       cell: ({ row }) => `${row.original.size_x} x ${row.original.size_z}`,
     }),
     columnHelper.display({
@@ -69,7 +69,7 @@ function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
           onClick={() => onSelect(row.original)}
           className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition-colors"
         >
-          Select
+          Odaberi
         </button>
       ),
     }),
@@ -89,14 +89,14 @@ function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && setQuery(search)}
-          placeholder="Search tasks..."
+          placeholder="Pretraži zadatke..."
           className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
         />
         <button
           onClick={() => setQuery(search)}
           className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium"
         >
-          Search
+          Pretraži
         </button>
       </div>
 
@@ -117,7 +117,7 @@ function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="border border-gray-300 px-4 py-4 text-center text-gray-500 text-sm">
-                  No tasks found.
+                  Nema pronađenih zadataka.
                 </td>
               </tr>
             ) : (
@@ -159,8 +159,8 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
-    if (!formData.task_id) newErrors.task_id = 'Please select a task'
-    if (!formData.type_id) newErrors.type_id = 'Please select a type'
+    if (!formData.task_id) newErrors.task_id = 'Odaberite zadatak.'
+    if (!formData.type_id) newErrors.type_id = 'Odaberite vrstu.'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -182,9 +182,9 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
   const isPythonTask = selectedType?.name.toLowerCase() === 'python'
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="readable-content rounded-lg border border-gray-200 bg-white p-6">
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-300 bg-red-100 p-3 text-red-700" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -192,7 +192,7 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
       <div className="space-y-4">
         {/* Task Selection */}
         <div>
-          <label className="block text-sm font-medium mb-1">Task *</label>
+          <label className="mb-1 block font-medium">Zadatak *</label>
           {formData.task_id && !showPicker ? (
             <div className="flex items-center gap-3 px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
               <span className="flex-1">
@@ -203,7 +203,7 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
                 onClick={() => setShowPicker(true)}
                 className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-sm rounded-md transition-colors"
               >
-                Change
+                Promijeni
               </button>
             </div>
           ) : (
@@ -214,7 +214,7 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
 
         {/* Type */}
         <div>
-          <label className="block text-sm font-medium mb-1">Type *</label>
+          <label className="mb-1 block font-medium">Vrsta *</label>
           <select
             value={formData.type_id}
             onChange={(e) => {
@@ -260,13 +260,13 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
 
         {/* Preview */}
         <div>
-          <label className="block text-sm font-medium mb-1">Preview</label>
+          <label className="mb-1 block font-medium">Sažetak</label>
           <input
             type="text"
             value={formData.preview}
             onChange={(e) => setFormData((prev) => ({ ...prev, preview: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="Optional preview"
+            placeholder="Neobavezni sažetak"
           />
         </div>
 
@@ -278,7 +278,7 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
               checked={formData.allows_robot}
               onChange={(e) => setFormData((prev) => ({ ...prev, allows_robot: e.target.checked }))}
             />
-            <span className="text-sm font-medium">Allows robot</span>
+            <span className="font-medium">Omogućuje korištenje robota</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -286,20 +286,20 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
               checked={formData.is_logged}
               onChange={(e) => setFormData((prev) => ({ ...prev, is_logged: e.target.checked }))}
             />
-            <span className="text-sm font-medium">Is logged</span>
+            <span className="font-medium">Bilježi se (logging)</span>
           </label>
         </div>
 
         {/* Instructions */}
         <div>
-          <label className="block text-sm font-medium mb-1">Instructions</label>
+          <label className="mb-1 block font-medium">Upute</label>
           <RichTextEditor
             value={formData.instructions}
             onChange={(val) => setFormData((prev) => ({ ...prev, instructions: val }))}
             placeholder=""
           />
-          <p className="mt-1 text-xs text-gray-400">
-            Supports bold, italic, underline, headings, and lists. Shortcuts: Ctrl+B, Ctrl+I, Ctrl+U.
+          <p className="mt-1 text-sm text-gray-500">
+            Podržani su podebljani i ukošeni tekst, podcrtavanje, naslovi i popisi. Prečaci: Ctrl+B, Ctrl+I, Ctrl+U.
           </p>
         </div>
       </div>
@@ -311,13 +311,13 @@ export function ActivityTaskForm({ initialData, types, onSubmit, isLoading, erro
           disabled={isLoading}
           className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Saving...' : isEditing ? 'Update' : 'Add Task'}
+          {isLoading ? 'Spremanje...' : isEditing ? 'Ažuriraj' : 'Dodaj zadatak'}
         </button>
         <button
           onClick={() => navigate({ to: cancelTo })}
           className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Cancel
+          Odustani
         </button>
       </div>
     </div>

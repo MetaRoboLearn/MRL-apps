@@ -40,7 +40,7 @@ def get_badge(badge_id: int):
         repo = BadgeRepository(session)
         badge = repo.get_by_id(badge_id)
         if not badge:
-            return jsonify({"error": "Badge not found"}), 404
+            return jsonify({"error": "Značka nije pronađena."}), 404
         return jsonify(_badge_to_dict(badge)), 200
 
 
@@ -67,7 +67,7 @@ def create_badge():
     image = request.files.get("image")
 
     if not title or value is None or not image or activity_task_id is None:
-        return jsonify({"error": "Missing fields (title, value, activity_task_id, image required)"}), 400
+        return jsonify({"error": "Nedostaju obavezna polja (naslov, vrijednost, ID zadatka aktivnosti i slika)."}), 400
 
     try:
         activity_task_id = int(activity_task_id)
@@ -77,12 +77,12 @@ def create_badge():
 
     image_url = save_badge_image(image)
     if not image_url:
-        return jsonify({"error": "Invalid image file"}), 400
+        return jsonify({"error": "Neispravna slikovna datoteka."}), 400
 
     with db_session() as session:
         activity_task = ActivityTaskRepository(session).get_by_id(activity_task_id)
         if not activity_task:
-            return jsonify({"error": "Activity task not found"}), 404
+            return jsonify({"error": "Zadatak aktivnosti nije pronađen."}), 404
         if not activity_task.activity or (
             current_user.role.name != 'admin'
             and activity_task.activity.created_by != current_user.id
@@ -120,7 +120,7 @@ def update_badge(badge_id: int):
     with db_session() as session:
         existing_badge = BadgeRepository(session).get_by_id(badge_id)
         if not existing_badge:
-            return jsonify({"error": "Badge not found"}), 404
+            return jsonify({"error": "Značka nije pronađena."}), 404
         if not owns_badge(current_user, existing_badge):
             return jsonify({"error": "You can only edit your own badges"}), 403
 
@@ -128,7 +128,7 @@ def update_badge(badge_id: int):
     if image:
         image_url = save_badge_image(image)
         if not image_url:
-            return jsonify({"error": "Invalid image file"}), 400
+            return jsonify({"error": "Neispravna slikovna datoteka."}), 400
 
         # delete old image
         with db_session() as session:
@@ -148,7 +148,7 @@ def update_badge(badge_id: int):
             actor_user_id=current_user.id,
         )
         if not badge:
-            return jsonify({"error": "Badge not found"}), 404
+            return jsonify({"error": "Značka nije pronađena."}), 404
 
         return jsonify(_badge_to_dict(badge)), 200
 
@@ -161,7 +161,7 @@ def delete_badge(badge_id: int):
         repo = BadgeRepository(session)
         badge = repo.get_by_id(badge_id)
         if not badge:
-            return jsonify({"error": "Badge not found"}), 404
+            return jsonify({"error": "Značka nije pronađena."}), 404
         if not owns_badge(current_user, badge):
             return jsonify({"error": "You can only delete your own badges"}), 403
 

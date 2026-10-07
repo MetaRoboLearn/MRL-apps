@@ -53,21 +53,21 @@ function RouteComponent() {
   }
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this badge?')) {
+    if (window.confirm('Jeste li sigurni da želite obrisati ovu značku?')) {
       deleteMutation.mutate()
     }
   }
 
   return (
-    <div className="p-4 max-w-2xl w-2xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Edit Badge</h1>
+    <div className="readable-content mx-auto w-full max-w-2xl p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Uredi značku</h1>
         <button
           onClick={handleDelete}
           disabled={deleteMutation.isPending}
           className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-medium disabled:bg-gray-300"
         >
-          {deleteMutation.isPending ? 'Deleting...' : 'Delete Badge'}
+          {deleteMutation.isPending ? 'Brisanje...' : 'Obriši značku'}
         </button>
       </div>
       <BadgeForm

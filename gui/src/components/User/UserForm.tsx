@@ -33,6 +33,12 @@ type UserFormPropsEdit = {
 
 type UserFormProps = UserFormPropsCreate | UserFormPropsEdit
 
+const roleLabel = (role: string) => ({
+  admin: 'Administrator',
+  teacher: 'Nastavnik',
+  student: 'Učenik',
+}[role.toLowerCase()] || capitalizeFirstLetter(role))
+
 export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error }: UserFormProps) {
   const navigate = useNavigate()
   const isEditing = !!user
@@ -68,21 +74,21 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
     const newErrors: Record<string, string> = {}
 
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required'
+      newErrors.username = 'Korisničko ime je obavezno.'
     }
 
     // Password is required for create, optional for edit
     if (!isEditing && !formData.password.trim()) {
-      newErrors.password = 'Password is required'
+      newErrors.password = 'Lozinka je obavezna.'
     } else if (formData.password && formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
+      newErrors.password = 'Lozinka mora sadržavati najmanje 8 znakova.'
     }
 
     if (!formData.first_name.trim()) {
-      newErrors.first_name = 'First name is required'
+      newErrors.first_name = 'Ime je obavezno.'
     }
     if (!formData.last_name.trim()) {
-      newErrors.last_name = 'Last name is required'
+      newErrors.last_name = 'Prezime je obavezno.'
     }
 
     setErrors(newErrors)
@@ -156,9 +162,9 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6">
+    <form onSubmit={handleSubmit} className="readable-content rounded-lg border border-gray-200 bg-white p-6">
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-300 bg-red-100 p-3 text-red-700" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -167,7 +173,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         {/* Username */}
         <div>
           <label htmlFor="username" className="block text-sm font-medium mb-1">
-            Username *
+            Korisničko ime *
           </label>
           <input
             type="text"
@@ -188,7 +194,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         {/* Password */}
         <div>
           <label htmlFor="password" className="block text-sm font-medium mb-1">
-            Password {isEditing ? '(leave blank to keep current)' : '*'}
+            Lozinka {isEditing ? '(ostavite prazno za zadržavanje postojeće)' : '*'}
           </label>
           <input
             type="password"
@@ -209,7 +215,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         {/* First Name */}
         <div>
           <label htmlFor="first_name" className="block text-sm font-medium mb-1">
-            First Name *
+            Ime *
           </label>
           <input
             type="text"
@@ -230,7 +236,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         {/* Last Name */}
         <div>
           <label htmlFor="last_name" className="block text-sm font-medium mb-1">
-            Last Name *
+            Prezime *
           </label>
           <input
             type="text"
@@ -251,7 +257,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
         {/* Role ID */}
         <div>
           <label htmlFor="role_id" className="block text-sm font-medium mb-1">
-            Role *
+            Uloga *
           </label>
           <select
             id="role_id"
@@ -261,7 +267,7 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
             {roles.map((r) => (
-              <option key={r.id} value={r.id}>{capitalizeFirstLetter(r.name)}</option>
+              <option key={r.id} value={r.id}>{roleLabel(r.name)}</option>
             ))}
           </select>
         </div>
@@ -301,14 +307,14 @@ export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error 
           disabled={isLoading}
           className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Saving...' : isEditing ? 'Update User' : 'Create User'}
+          {isLoading ? 'Spremanje...' : isEditing ? 'Ažuriraj korisnika' : 'Stvori korisnika'}
         </button>
         <button
           type="button"
           onClick={() => navigate({ to: '/admin/users' })}
           className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Cancel
+          Odustani
         </button>
       </div>
     </form>

@@ -4,6 +4,12 @@ import { queryOptions, useSuspenseQuery, useMutation, useQueryClient } from '@ta
 import { getUserById, deleteUser } from "../../../../api/usersApi.ts"
 import { formatLocalDateTime } from "../../../../utils.ts"
 
+const roleLabel = (role: string) => ({
+  admin: 'Administrator',
+  teacher: 'Nastavnik',
+  student: 'Učenik',
+}[role.toLowerCase()] || role)
+
 const userQueryOptions = (userId: string) =>
   queryOptions({
     queryKey: ['user', userId],
@@ -30,29 +36,29 @@ function RouteComponent() {
       navigate({ to: '/admin/users' })
     },
     onError: (error: Error) => {
-      alert(`Failed to delete user: ${error.message}`)
+      alert(`Brisanje korisnika nije uspjelo: ${error.message}`)
     },
   })
 
   const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete ${user.first_name} ${user.last_name}?`)) {
+    if (confirm(`Jeste li sigurni da želite obrisati korisnika ${user.first_name} ${user.last_name}?`)) {
       deleteMutation.mutate()
     }
   }
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">User Details</h1>
+    <div className="readable-content p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Detalji korisnika</h1>
         <button
           onClick={() => navigate({ to: '/admin/users' })}
           className="px-4 py-2 text-gray-600 hover:text-gray-800"
         >
-          ← Back to Users
+          ← Nazad na korisnike
         </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col gap-6 lg:flex-row">
         {/* Left: User Info + Actions */}
         <div className="lg:w-1/2">
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -72,7 +78,7 @@ function RouteComponent() {
                       : 'bg-red-100 text-red-800'
                   }`}
                 >
-                  {user.active ? 'Active' : 'Inactive'}
+                  {user.active ? 'Aktivan' : 'Neaktivan'}
                 </span>
               </div>
             </div>
@@ -81,44 +87,44 @@ function RouteComponent() {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">User ID</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">ID korisnika</label>
                   <p className="text-base">{user.id}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Username</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Korisničko ime</label>
                   <p className="text-base">{user.username}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">First Name</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Ime</label>
                   <p className="text-base">{user.first_name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Last Name</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Prezime</label>
                   <p className="text-base">{user.last_name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Role</label>
-                  <p className="text-base">Role {user.role_name}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Uloga</label>
+                  <p className="text-base">{roleLabel(user.role_name)}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Last Login</label>
-                  <p className="text-base">{user.last_login ? formatLocalDateTime(user.last_login) : 'Never'}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Posljednja prijava</label>
+                  <p className="text-base">{user.last_login ? formatLocalDateTime(user.last_login) : 'Nikada'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Created At</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Kreirano</label>
                   <p className="text-base">{formatLocalDateTime(user.created_at)}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Updated At</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Ažurirano</label>
                   <p className="text-base">{formatLocalDateTime(user.updated_at)}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Created By</label>
-                  <p className="text-base">{user.created_by ? `User #${user.created_by}` : 'System'}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Kreirao</label>
+                  <p className="text-base">{user.created_by ? `Korisnik #${user.created_by}` : 'Sustav'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Updated By</label>
-                  <p className="text-base">{user.updated_by ? `User #${user.updated_by}` : 'System'}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Ažurirao</label>
+                  <p className="text-base">{user.updated_by ? `Korisnik #${user.updated_by}` : 'Sustav'}</p>
                 </div>
               </div>
             </div>
@@ -130,14 +136,14 @@ function RouteComponent() {
                   onClick={() => navigate({ to: '/admin/users/$userId/edit', params: { userId } })}
                   className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium"
                 >
-                  Edit User
+                  Uredi korisnika
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
                   className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  {deleteMutation.isPending ? 'Deleting...' : 'Delete User'}
+                  {deleteMutation.isPending ? 'Brisanje...' : 'Obriši korisnika'}
                 </button>
               </div>
             </div>

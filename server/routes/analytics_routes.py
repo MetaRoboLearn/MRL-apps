@@ -51,7 +51,7 @@ def _reject_inaccessible_selection(session, filters: DatasetFilters):
     inaccessible_activities = ActivityRepository(session).find_inaccessible_ids(current_user, filters.activity_ids)
     if inaccessible_groups or inaccessible_activities:
         return jsonify({
-            "error": "You do not have access to one or more selected groups/activities",
+            "error": "Nemate pristup jednoj ili više odabranih grupa ili aktivnosti.",
             "group_ids": inaccessible_groups,
             "activity_ids": inaccessible_activities,
         }), 403
@@ -89,9 +89,9 @@ def get_student_portfolio(student_id: int):
 
         student = session.query(User).filter(User.id == student_id).first()
         if not student or not student.role or student.role.name != "student":
-            return jsonify({"error": "Student not found"}), 404
+            return jsonify({"error": "Učenik nije pronađen."}), 404
         if not AnalyticsRepository(session).is_student_accessible(current_user.id, current_user.role.name, student_id):
-            return jsonify({"error": "You do not have access to this student"}), 403
+            return jsonify({"error": "Nemate pristup ovom učeniku."}), 403
 
         result = generate_student_portfolio(session, student_id, filters)
     return jsonify(result), 200

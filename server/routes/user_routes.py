@@ -53,7 +53,7 @@ def get_user(user_id: int):
         repo = UserRepository(session)
         user = repo.get_by_id(user_id)
         if not user:
-            return jsonify({"error": "User not found"}), 404
+            return jsonify({"error": "Korisnik nije pronađen."}), 404
         return jsonify(_user_to_dict(user)), 200
 
 
@@ -77,7 +77,7 @@ def list_users():
     search = request.args.get("search")
     group_assignment = request.args.get("group_assignment")
     if group_assignment not in (None, "assigned", "unassigned"):
-        return jsonify({"error": "group_assignment must be assigned or unassigned"}), 400
+        return jsonify({"error": "group_assignment mora biti assigned ili unassigned."}), 400
 
     with db_session() as session:
         repo = UserRepository(session)
@@ -104,13 +104,13 @@ def create_user():
     required = ("username", "password_hash", "first_name", "last_name", "role_id")
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
 
     with db_session() as session:
         repo = UserRepository(session)
         role = session.query(Role).filter(Role.id == int(data["role_id"])).first()
         if not role:
-            return jsonify({"error": "Role not found"}), 404
+            return jsonify({"error": "Uloga nije pronađena."}), 404
 
         initial_group_id = data.get("initial_group_id")
         initial_group = None
@@ -118,16 +118,16 @@ def create_user():
             try:
                 initial_group_id = int(initial_group_id)
             except (TypeError, ValueError):
-                return jsonify({"error": "initial_group_id must be an integer"}), 400
+                return jsonify({"error": "initial_group_id mora biti cijeli broj."}), 400
 
             initial_group = GroupRepository(session).get_by_id(initial_group_id)
             if not initial_group:
-                return jsonify({"error": "Initial group not found"}), 404
+                return jsonify({"error": "Početna grupa nije pronađena."}), 404
             if current_user.role.name != "admin" and initial_group.created_by != current_user.id:
-                return jsonify({"error": "You can only assign users to your own groups"}), 403
+                return jsonify({"error": "Korisnike možete dodijeliti samo svojim grupama."}), 403
 
         if repo.exists_username(data["username"]):
-            return jsonify({"error": "Username already exists"}), 409
+            return jsonify({"error": "Korisničko ime već postoji."}), 409
 
         user = repo.create(
             username=data["username"],
@@ -162,7 +162,7 @@ def update_user(user_id: int):
     allowed = {"username", "first_name", "last_name", "role_id", "password_hash"}
     unknown = [k for k in data.keys() if k not in allowed]
     if unknown:
-        return jsonify({"error": "Unknown fields", "unknown": unknown}), 400
+        return jsonify({"error": "Nepoznata polja.", "unknown": unknown}), 400
 
     with db_session() as session:
         repo = UserRepository(session)
@@ -171,7 +171,7 @@ def update_user(user_id: int):
         if "username" in data:
             existing = repo.get_by_username(data["username"])
             if existing and existing.id != user_id:
-                return jsonify({"error": "Username already exists"}), 409
+                return jsonify({"error": "Korisničko ime već postoji."}), 409
 
         user = repo.update(
             user_id,
@@ -186,7 +186,7 @@ def update_user(user_id: int):
             actor_user_id=current_user.id,
         )
         if not user:
-            return jsonify({"error": "User not found"}), 404
+            return jsonify({"error": "Korisnik nije pronađen."}), 404
 
         return jsonify(_user_to_dict(user)), 200
 
@@ -199,7 +199,7 @@ def deactivate_user(user_id: int):
         repo = UserRepository(session)
         user = repo.deactivate(user_id, actor_user_id=current_user.id)
         if not user:
-            return jsonify({"error": "User not found"}), 404
+            return jsonify({"error": "Korisnik nije pronađen."}), 404
         return jsonify(_user_to_dict(user)), 200
 
 
@@ -211,7 +211,7 @@ def activate_user(user_id: int):
         repo = UserRepository(session)
         user = repo.activate(user_id, actor_user_id=current_user.id)
         if not user:
-            return jsonify({"error": "User not found"}), 404
+            return jsonify({"error": "Korisnik nije pronađen."}), 404
         return jsonify(_user_to_dict(user)), 200
 
 
@@ -223,7 +223,7 @@ def delete_user(user_id: int):
         repo = UserRepository(session)
         ok = repo.delete(user_id)
         if not ok:
-            return jsonify({"error": "User not found"}), 404
+            return jsonify({"error": "Korisnik nije pronađen."}), 404
         return jsonify({"deleted": True}), 200
 
 

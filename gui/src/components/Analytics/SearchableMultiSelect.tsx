@@ -50,7 +50,7 @@ export function SearchableMultiSelect<Id extends number | string>({
         className="flex min-h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:bg-gray-100"
       >
         <span className="truncate">
-          {loading ? 'Loading...' : selectedIds.length === 0 ? `Select ${label.toLowerCase()}` : `${selectedIds.length} selected`}
+          {loading ? 'Učitavanje...' : selectedIds.length === 0 ? `Odaberi: ${label.toLowerCase()}` : `${selectedIds.length} odabrano`}
         </span>
         <span aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
       </button>
@@ -61,20 +61,20 @@ export function SearchableMultiSelect<Id extends number | string>({
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={`Search ${label.toLowerCase()}...`}
+            placeholder={`Pretraži: ${label.toLowerCase()}...`}
             className="mb-2 w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
           />
           <div className="mb-2 flex gap-2 text-xs">
             <button type="button" onClick={selectAll} className="text-blue-600 hover:underline">
-              Select all
+              Odaberi sve
             </button>
             <button type="button" onClick={() => onChange([])} className="text-gray-600 hover:underline">
-              Clear
+              Očisti
             </button>
           </div>
           <div className="max-h-56 overflow-y-auto">
             {visibleOptions.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-gray-500">No options found.</p>
+              <p className="px-2 py-3 text-gray-500">Nema pronađenih opcija.</p>
             ) : (
               visibleOptions.map((option) => (
                 <label key={option.id} className="flex cursor-pointer items-start gap-2 rounded px-2 py-2 text-sm hover:bg-gray-50">

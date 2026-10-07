@@ -7,7 +7,7 @@ export const getProgrammingElements = async (): Promise<ProgrammingElementOption
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to fetch programming elements')
+    throw new Error(error.error || 'Programske elemente nije moguće učitati.')
   }
 
   return response.json()

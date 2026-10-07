@@ -193,6 +193,7 @@ export function CodeAnalysisViewer({ code, taskAnalysis, template, expanded = fa
           </div>
         ))}
         {taskAnalysis?.syntax_error && <span className="block text-red-700">Pogreška sintakse u retku {taskAnalysis.syntax_error.lineno ?? '—'}: {taskAnalysis.syntax_error.message}</span>}
+        {taskAnalysis?.detection_method=="REGEX" && <span className="block text-gray-500">Zbog problema u detekciji, analiza koda provedena je alternativnom metodom te može biti neprecizna.</span>}
         {!taskAnalysis && <span className="block text-gray-500">Analiza koda nije dostupna.</span>}
         </div>
       </aside>

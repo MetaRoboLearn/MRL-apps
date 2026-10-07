@@ -26,7 +26,7 @@ def assign_badge():
     required = ("user_id", "badge_id")
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
 
     with db_session() as session:
         repo = UserBadgeRepository(session)
@@ -39,7 +39,7 @@ def assign_badge():
             )
         except IntegrityError:
             session.rollback()
-            return jsonify({"error": "This badge is already assigned to the user"}), 409
+            return jsonify({"error": "Ova značka već je dodijeljena korisniku."}), 409
         user_badge = repo.get_with_badge(user_badge.id)
         return jsonify(repo.assignment_state_dict(user_badge)), 201
 
@@ -57,7 +57,7 @@ def update_badge_comment(user_badge_id: int):
             actor_user_id=current_user.id,
         )
         if not user_badge:
-            return jsonify({"error": "User badge not found"}), 404
+            return jsonify({"error": "Dodijeljena značka nije pronađena."}), 404
         return jsonify(repo.assignment_state_dict(user_badge)), 200
 
 
@@ -71,7 +71,7 @@ def remove_badge(user_badge_id: int):
         badge_id = existing.badge_id if existing else None
         ok = repo.delete(user_badge_id)
         if not ok:
-            return jsonify({"error": "User badge not found"}), 404
+            return jsonify({"error": "Dodijeljena značka nije pronađena."}), 404
         return jsonify({"assigned": False, "user_badge_id": user_badge_id, "badge_id": badge_id}), 200
 
 
@@ -80,7 +80,7 @@ def remove_badge(user_badge_id: int):
 def get_my_badges():
     status = request.args.get("filter", "all").lower()
     if status not in {"all", "assigned", "unassigned"}:
-        return jsonify({"error": "filter must be one of: all, assigned, unassigned"}), 400
+        return jsonify({"error": "filter mora biti jedna od vrijednosti: all, assigned, unassigned."}), 400
 
     with db_session() as session:
 

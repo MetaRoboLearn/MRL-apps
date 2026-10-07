@@ -70,8 +70,8 @@ function RouteComponent() {
     setPage(0)
   }
 
-  if (isGroupLoading) return <div className="p-4">Loading...</div>
-  if (isGroupError || !group) return <div className="p-4 text-red-600">Unable to load this group.</div>
+  if (isGroupLoading) return <div className="readable-content p-6" role="status">Učitavanje...</div>
+  if (isGroupError || !group) return <div className="readable-content p-6 text-red-600" role="alert">Grupu nije moguće učitati.</div>
 
   const mutationError = saveMutation.error as GroupMutationError | null
   const errorMessage = mutationError
@@ -79,10 +79,10 @@ function RouteComponent() {
     : undefined
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-6">
-        <div><h1 className="text-2xl font-bold">Edit Members</h1><p className="text-gray-500 mt-1">Group: {group.group_name}</p></div>
-        <button onClick={() => navigate({ to: '/admin/users/groups/$groupId', params: { groupId } })} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium">Back</button>
+    <div className="readable-content p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div><h1 className="text-2xl font-bold">Uredi članove</h1><p className="mt-1 text-gray-500">Grupa: {group.group_name}</p></div>
+        <button onClick={() => navigate({ to: '/admin/users/groups/$groupId', params: { groupId } })} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium">Natrag</button>
       </div>
       <StudentSelector
         students={studentData as SelectableStudent[]}
@@ -92,18 +92,18 @@ function RouteComponent() {
         page={page}
         hasMore={studentData.length === PAGE_SIZE}
         search={search}
-        selectedTitle="Selected members"
-        actionLabel="Add"
-        undoLabel="Remove"
-        selectedEmptyLabel="No members selected."
+        selectedTitle="Odabrani članovi"
+        actionLabel="Dodaj"
+        undoLabel="Ukloni"
+        selectedEmptyLabel="Nema odabranih članova."
         onSearchChange={setSearch}
         onSearch={handleSearch}
         onPageChange={setPage}
         onToggle={toggleStudent}
         footer={
           <div className="flex gap-3 mt-6">
-            <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300">{saveMutation.isPending ? 'Saving...' : 'Save Members'}</button>
-            <button onClick={() => navigate({ to: '/admin/users/groups/$groupId', params: { groupId } })} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium">Cancel</button>
+            <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300">{saveMutation.isPending ? 'Spremanje...' : 'Spremi članove'}</button>
+            <button onClick={() => navigate({ to: '/admin/users/groups/$groupId', params: { groupId } })} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium">Odustani</button>
             {errorMessage && <span className="self-center text-sm text-red-600">{errorMessage}</span>}
           </div>
         }

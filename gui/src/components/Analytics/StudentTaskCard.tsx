@@ -57,20 +57,20 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
   }, [card.badge?.comment, card.badge?.user_badge_id])
 
   return (
-    <article className="rounded-md border border-gray-200 bg-white p-5 shadow-sm">
+    <article className="readable-content rounded-md border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-gray-500">{card.activity_title || 'Activity'}</p>
-          <h2 className="text-xl font-semibold text-gray-900">{card.title || `Task #${card.task_id}`}</h2>
+          <p className="text-gray-500">{card.activity_title || 'Aktivnost'}</p>
+          <h2 className="text-xl font-semibold text-gray-900">{card.title || `Zadatak #${card.task_id}`}</h2>
         </div>
         <span className={`rounded-full px-3 py-1 text-sm font-semibold capitalize ring-1 ${statusClasses(card.status)}`}>{statusLabel(card.status)}</span>
       </div>
 
-      <dl className="mb-5 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+      <dl className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
         <div><dt className="text-gray-500">Utrošeno vrijeme</dt><dd className="font-medium">{formatDuration(card.time_spent_seconds)}</dd></div>
         <div><dt className="text-gray-500">Broj pokretanja</dt><dd className="font-medium">{card.attempt_count}</dd></div>
         <div><dt className="text-gray-500">Razina strukture</dt><dd className="font-medium">{card.task_difficulty ?? '—'}</dd></div>
-        <div><dt className="text-gray-500">Attempted</dt><dd className="font-medium">{card.attempt_date ? formatLocalDateTime(card.attempt_date) : '—'}</dd></div>
+        <div><dt className="text-gray-500">Datum pokušaja</dt><dd className="font-medium">{card.attempt_date ? formatLocalDateTime(card.attempt_date) : '—'}</dd></div>
         {completionPercent !== null && (
           <div className="md:col-span-2">
             <dt id={`task-completion-label-${card.activity_task_id}`} className="text-gray-500">Postotak pokrivenih očekivanih elemenata</dt>
@@ -97,20 +97,20 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
       </dl>
 
       <details className="mb-5 border-y border-gray-200 py-5">
-        <summary className="cursor-pointer font-semibold text-gray-800">Learning trajectory</summary>
+        <summary className="cursor-pointer font-semibold text-gray-800">Putanja učenja</summary>
         <div className="pt-3">
           <div className="rounded-md border border-gray-200 bg-gray-50 p-2">
-            <img src={card.trajectory_png} alt={`Learning trajectory for ${card.title || 'task'}`} className="mx-auto block h-auto w-full object-contain" />
+            <img src={card.trajectory_png} alt={`Putanja učenja za ${card.title || 'zadatak'}`} className="mx-auto block h-auto w-full object-contain" />
           </div>
         </div>
       </details>
 
-      <div className="mb-5 rounded-md bg-gray-50 p-4 text-sm">
+      <div className="mb-6 rounded-md bg-gray-50 p-5">
         <h3 className="mb-2 font-semibold text-gray-800">Broj linija</h3>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
-          <span>Min: {card.code_complexity.min}</span>
-          <span>Average: {card.code_complexity.average}</span>
-          <span>Max: {card.code_complexity.max}</span>
+          <span>Minimum: {card.code_complexity.min}</span>
+          <span>Prosjek: {card.code_complexity.average}</span>
+          <span>Maksimum: {card.code_complexity.max}</span>
         </div>
       </div>
 
@@ -123,27 +123,27 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
 
       <section className="border-t border-gray-200 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h3 className="font-semibold text-gray-800">Badge</h3>
-          {card.badge_definition ? <span className="text-sm text-gray-500">{card.badge_definition.title}</span> : <span className="text-sm text-gray-500">No badge linked to this task</span>}
+          <h3 className="font-semibold text-gray-800">Značka</h3>
+          {card.badge_definition ? <span className="text-gray-500">{card.badge_definition.title}</span> : <span className="text-gray-500">Nema značke povezane s ovim zadatkom</span>}
         </div>
         {card.badge_definition && (
           <div className="flex flex-col gap-3 md:flex-row md:items-start">
-            <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Teacher comment" rows={3} className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm" />
+            <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Komentar nastavnika" rows={3} className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2" />
             <div className="flex flex-wrap gap-2 md:w-64">
               <button type="button" disabled={isMutating || isSuggestionPending} aria-busy={isSuggesting} onClick={() => {
                 setSuggestionNotice(null)
                 onSuggest(card, setComment, setSuggestionNotice)
-              }} className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">
+              }} className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 px-3 py-2 hover:bg-gray-50 disabled:opacity-50">
                 {isSuggesting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400/40 border-t-gray-700" aria-hidden="true" />}
                 {isSuggesting ? 'Generiranje prijedloga...' : 'Predloži komentar'}
               </button>
               {isAssigned ? (
                 <>
-                  <button type="button" disabled={isMutating} onClick={() => onUpdate(card, comment)} className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Update</button>
-                  <button type="button" disabled={isMutating} onClick={() => onUnassign(card)} className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">Unassign</button>
+                  <button type="button" disabled={isMutating} onClick={() => onUpdate(card, comment)} className="rounded-md bg-blue-600 px-3 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50">Ažuriraj</button>
+                  <button type="button" disabled={isMutating} onClick={() => onUnassign(card)} className="rounded-md bg-red-600 px-3 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-50">Ukloni dodjelu</button>
                 </>
               ) : (
-                <button type="button" disabled={isMutating} onClick={() => onAssign(card, comment)} className="rounded-md bg-turquoise-500 px-3 py-2 text-sm font-medium text-white hover:bg-turquoise-600 disabled:opacity-50">Assign</button>
+                <button type="button" disabled={isMutating} onClick={() => onAssign(card, comment)} className="rounded-md bg-turquoise-500 px-3 py-2 font-medium text-white hover:bg-turquoise-600 disabled:opacity-50">Dodijeli</button>
               )}
             </div>
           </div>
