@@ -51,6 +51,8 @@
 # Task analysis contract
 Python analytics and student submission responses include `task_analysis`. It contains `syntax_valid`, `detection_method` (`AST` or `REGEX`), `syntax_error`, ordered `expected_elements`, and `weighted_completion`. Each expected element includes its canonical `element_id`, display `name`, `position`, ROC `weight`, evidence `count`, `status`, and source-coordinate `evidence`. The student submissions response omits positions, weights, and `weighted_completion`; teacher analytics retains them. A task without configured expected elements has an empty list and `weighted_completion: null`. Raw AST/regex output is used only inside the analyzer orchestrator and is not included in analytics records or API responses.
 
+For the detailed analyzer evidence shape, planner selection rules, generation/provider contract, and current differences from plan intent, see [Analyzer, planner, and LLM contracts](./recommender-contracts.md).
+
 # UserStartedTask
 | Akcija | Path                                                 | Params / Body                                                                                                                         | Return                | Opis                                     |
 |--------|------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|-----------------------|------------------------------------------|

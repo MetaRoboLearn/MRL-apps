@@ -101,6 +101,8 @@ def get_student_portfolio(student_id: int):
 @role_required("admin", "teacher")
 def post_llm_feedback():
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        data = {}
     user_started_task_id = data.get("user_started_task_id")
     if (
         not isinstance(user_started_task_id, int)
