@@ -11,6 +11,7 @@ GenerationKind = Literal[
     "additional_recommendation",
     "reflection_question",
     "compatibility_comment",
+    "beautify",
 ]
 
 
@@ -41,10 +42,21 @@ _RECOMMENDATION_INSTRUCTIONS = (
     "pogrešno i nemoj izravno narediti dodavanje, pozivanje ili ispravak. Za task_outcome usmjeri "
     "pažnju na ponašanje ili cilj zadatka; za observed_behavior potakni razmišljanje o tome kako "
     "dio programa utječe na rezultat; za code_structure potakni ponovno razmatranje zapisa ili "
-    "rasporeda naredbi bez navođenja ispravka. Ako je riječ o sintaktičkoj pogrešci, jasno spomeni "
-    "da postoji problem u općem području navedenom u syntax_region i upotrijebi taj opis kao "
-    "lokaciju, ali nemoj navesti broj retka, parserovu poruku, stupac, izvorni redak, nedostajući "
-    "znak ili točnu izmjenu. Izvadak koda koristi samo kao pozadinu i nemoj ga citirati."
+    "rasporeda naredbi bez navođenja ispravka. Ako je riječ o sintaktičkoj pogrešci, izravno uputi "
+    "učenika da pregleda točno navedeni redak ili raspon u općem području navedenom u syntax_region. "
+    "Nemoj navesti parserovu poruku, stupac, izvorni redak, nedostajući znak, točan problem ili "
+    "točnu izmjenu. Izvadak koda koristi samo kao pozadinu i nemoj ga citirati."
+)
+
+_BEAUTIFY_INSTRUCTIONS = (
+    "Preoblikuj priložene, već provjerene dijelove povratne informacije u jedan prirodan hrvatski "
+    "odlomak sastavljen od najmanje dvije kratke, jasno odvojene rečenice; nemoj sve spajati u jednu "
+    "dugu rečenicu. Sačuvaj njihovo značenje i činjenice te strogo zadrži redoslijed: pohvale, izjava o "
+    "dovršenosti, glavna preporuka, dodatna preporuka, pitanje za razmišljanje. Preskoči prazne "
+    "dijelove. Poveži rečenice kratkim prijelazima tako da tekst ne zvuči kao skup izoliranih "
+    "rečenica. Ne dodaj nove nalaze, preporuke, tvrdnje, brojčane ocjene ni oznake odjeljaka. "
+    "Pitanje za razmišljanje, ako postoji, mora ostati na kraju i završiti upitnikom. Vrati samo "
+    "jedan odlomak bez prijeloma retka, navodnika ili Markdowna."
 )
 
 _SECTION_INSTRUCTIONS: dict[GenerationKind, str] = {
@@ -77,6 +89,7 @@ _SECTION_INSTRUCTIONS: dict[GenerationKind, str] = {
         "Napiši tri kratke rečenice učeniku, oslonjene samo na priložene nalaze "
         "analize koda. Ne dodaj elemente zadatka koji nisu navedeni."
     ),
+    "beautify": _BEAUTIFY_INSTRUCTIONS,
 }
 
 
@@ -108,14 +121,31 @@ def _task_context(task_title: str | None, task_preview: str | None) -> dict[str,
     return context
 
 
+def _syntax_line_range(item: dict[str, Any]) -> str:
+    syntax_error = item.get("syntax_error")
+    if not isinstance(syntax_error, dict):
+        return "nepoznatom retku"
+
+    start = syntax_error.get("lineno")
+    end = syntax_error.get("end_lineno") or start
+    if not isinstance(start, int) or not isinstance(end, int):
+        return "nepoznatom retku"
+    return f"retku {start}" if start == end else f"redcima {start}-{end}"
+
+
 def _request(
     kind: GenerationKind,
     context: dict[str, Any],
 ) -> GenerationRequest:
     serialized_context = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
+    system_prompt = (
+        f"{_SECTION_INSTRUCTIONS[kind]}"
+        if kind == "beautify"
+        else f"{_BASE_INSTRUCTIONS} {_SECTION_INSTRUCTIONS[kind]}"
+    )
     return GenerationRequest(
         kind=kind,
-        system_prompt=f"{_BASE_INSTRUCTIONS} {_SECTION_INSTRUCTIONS[kind]}",
+        system_prompt=system_prompt,
         user_prompt=f"Kontekst za ovu rečenicu u JSON-u:\n{serialized_context}",
     )
 
@@ -130,6 +160,7 @@ def _recommendation_context(
         return {
             "guidance_goal": "code_structure",
             "syntax_region": item.get("syntax_region") or "opći strukturni dio koda",
+            "syntax_line_range": _syntax_line_range(item),
             **_task_context(task_title, task_preview),
         }
     elif item.get("status") == "not_detected":
@@ -185,10 +216,16 @@ def build_generation_requests(
             reflection_context["syntax_region"] = (
                 item.get("syntax_region") or "opći strukturni dio koda"
             )
+            reflection_context["syntax_line_range"] = _syntax_line_range(item)
         else:
             reflection_context["code_evidence"] = _evidence_excerpt(item, code)
         requests.append(_request("reflection_question", reflection_context))
     return requests
+
+
+def build_beautify_request(section_text: dict[str, Any]) -> GenerationRequest:
+    """Build a final prose pass from already validated feedback sections."""
+    return _request("beautify", {"sections": section_text})
 
 
 def fallback_text(request: GenerationRequest) -> str:
@@ -208,7 +245,8 @@ def fallback_text(request: GenerationRequest) -> str:
         return f"Lijepo si upotrijebio/la element: {name}."
     if context.get("guidance_goal") == "code_structure":
         region = context.get("syntax_region") or "opći strukturni dio koda"
-        return f"Razmotri kako bi {region} mogao utjecati na ponašanje programa."
+        line_range = context.get("syntax_line_range") or "nepoznatom retku"
+        return f"Pregledaj {line_range} u području {region} i provjeri kako taj dio utječe na ponašanje programa."
     if context.get("guidance_goal") == "task_outcome":
         return "Vrijedi razmisliti kakvo bi ponašanje programa najbolje odgovaralo cilju zadatka."
     return "Vrijedi razmotriti kako bi mala promjena u ovom dijelu programa utjecala na rezultat."

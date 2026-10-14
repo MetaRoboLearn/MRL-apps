@@ -1,4 +1,4 @@
-import { formatLocalDateTime } from '../../utils.ts'
+import { formatDuration, formatLocalDateTime } from '../../utils.ts'
 import { Submission } from '../../types/analyticsTypes.ts'
 import { CodeAnalysisViewer } from './CodeAnalysisViewer.tsx'
 import { SubmissionStatusBadge } from './SubmissionStatusBadge.tsx'
@@ -30,7 +30,7 @@ export function SubmissionModal({ submission, onClose }: SubmissionModalProps) {
           </div>
           <div>
             <dt className="text-gray-500">Trajanje</dt>
-            <dd className="mt-1 font-semibold text-gray-900">{submission.duration_seconds} s</dd>
+            <dd className="mt-1 font-semibold text-gray-900">{formatDuration(submission.duration_seconds)}</dd>
           </div>
           <div>
             <dt className="text-gray-500">Broj pokretanja</dt>

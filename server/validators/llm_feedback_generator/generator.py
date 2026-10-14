@@ -6,6 +6,7 @@ from typing import Any
 
 from .feedback_planner import (
     GenerationRequest,
+    build_beautify_request,
     build_feedback_plan,
     build_generation_requests,
     fallback_text,
@@ -14,6 +15,7 @@ from .llm_provider import FeedbackProvider, ProviderError, get_provider
 
 
 _NUMERIC_GRADE = re.compile(r"\b\d+(?:[.,]\d+)?\s*/\s*5\b|\b(?:ocjena|bodovi)\s*:?\s*\d+", re.IGNORECASE)
+_SENTENCE_END = re.compile(r"[.!?](?=\s|$)")
 
 
 def _generate_one(
@@ -33,6 +35,19 @@ def _validated_text(request: GenerationRequest, text: str) -> str | None:
     if _NUMERIC_GRADE.search(normalized):
         return None
     if request.kind == "reflection_question" and not normalized.endswith("?"):
+        return None
+    return normalized
+
+
+def _validated_beautify(text: str, reflection_question: str | None) -> str | None:
+    normalized = text.strip()
+    if not normalized or len(normalized) > 2500:
+        return None
+    if len(_SENTENCE_END.findall(normalized)) < 2:
+        return None
+    if _NUMERIC_GRADE.search(normalized):
+        return None
+    if reflection_question and not normalized.endswith("?"):
         return None
     return normalized
 
@@ -110,9 +125,38 @@ def generate_feedback(
         for key in ("main_recommendation", "additional_recommendation", "reflection_question")
         if (text := answer[key])
     )
+    assembled_suggestion = "\n".join(suggestion_parts)
+    suggestion = assembled_suggestion
+
+    should_beautify = (
+        feedback_plan.get("source") == "task_analysis"
+        and len(suggestion_parts) > 1
+    )
+    if should_beautify:
+        beautify_request = build_beautify_request({
+            "praises": answer["praises"],
+            "completion_statement": answer["completion_statement"],
+            "main_recommendation": answer["main_recommendation"],
+            "additional_recommendation": answer["additional_recommendation"],
+            "reflection_question": answer["reflection_question"],
+        })
+        assert active_provider is not None
+        beautified, beautify_reason = _generate_one((active_provider, beautify_request))
+        validated_beautified = _validated_beautify(
+            beautified,
+            answer["reflection_question"],
+        ) if isinstance(beautified, str) else None
+        if validated_beautified is not None:
+            suggestion = validated_beautified
+        else:
+            fallback_sections.append("beautify")
+            fallback_reasons.append({
+                "section": "beautify",
+                "reason": beautify_reason or "invalid_response",
+            })
 
     return {
-        "suggestion": "\n".join(suggestion_parts),
+        "suggestion": suggestion,
         "used_fallback": bool(fallback_sections),
         "fallback_sections": fallback_sections,
         "fallback_reasons": fallback_reasons,

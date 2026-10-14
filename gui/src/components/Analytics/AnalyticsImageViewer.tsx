@@ -24,8 +24,8 @@ export function AnalyticsImageViewer({ title, src }: AnalyticsImageViewerProps) 
 
   const image = loadedImage?.src === src ? loadedImage : null
   const zoom = zoomState.src === src ? zoomState.value : 1
-  const fitScale = image && viewportSize.width > 0 && viewportSize.height > 0
-    ? Math.min(viewportSize.width / image.width, viewportSize.height / image.height, 1)
+  const fitScale = image && viewportSize.width > 0
+    ? viewportSize.width / image.width
     : 1
   const imageWidth = image ? image.width * fitScale * zoom : 0
   const imageHeight = image ? image.height * fitScale * zoom : 0
@@ -47,7 +47,7 @@ export function AnalyticsImageViewer({ title, src }: AnalyticsImageViewerProps) 
           </button>
         </div>
       </div>
-      <div ref={viewportRef} className="h-[34rem] max-h-[70vh] overflow-auto bg-gray-50 p-4">
+      <div ref={viewportRef} className="h-[34rem] max-h-[70vh] overflow-auto bg-gray-50">
         <div
           className="flex items-center justify-center"
           style={{ width: `${Math.max(viewportSize.width, imageWidth)}px`, height: `${Math.max(viewportSize.height, imageHeight)}px` }}

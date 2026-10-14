@@ -256,17 +256,27 @@ passed as data and explicitly treated as untrusted content, not instructions.
 Praises receive their selected item and source excerpts. Element
 recommendations receive a guidance goal, topic, relevant source excerpts, and
 optional task title/preview to make recommendations aligned with task context and task goal. A syntax recommendation receives a broad
-`syntax_region`, not the parser message or exact line so that the LLM doesn't give a concrete `fix error on line 32` recommendation. Reflection requests
-receive the selected reflection goal/topic and relevant evidence or syntax
-region. The compatibility request receives coding-standard findings.
+`syntax_region` and an exact source line/range as a location cue. It must direct
+the student to inspect that location without exposing the parser message, source
+line, missing token, exact problem, or correction. Reflection requests receive
+the selected reflection goal/topic and relevant evidence or syntax region and
+location cue. The compatibility request receives coding-standard findings.
 
 The prompt asks for text shorter than 400 characters. The server independently
 rejects empty text, multiline text, text over 600 characters, grade-like text
 matching its numeric-grade check, and reflection text that does not end in
 `?`. Invalid or failed section generation uses deterministic Croatian fallback
-text. Generated sections are assembled in this order: praises, completion
-statement, main recommendation, additional recommendation, reflection
-question. The completion statement is server-controlled, not LLM-generated.
+text. Generated sections are first assembled in this order: praises, completion
+statement, main recommendation, additional recommendation, reflection question.
+For normal task feedback with more than one section, the server then makes one
+final `beautify` request containing only those validated section texts. The
+beautifier may connect the wording into one flowing paragraph made of multiple
+short sentences, but may not add facts or sections. Its output must contain no
+line breaks, labels, or numeric grades and must leave the reflection question
+last. A one-sentence result is invalid. If the request fails or is invalid, the
+pre-beautify ordered assembly is returned. The completion statement
+is server-controlled, not LLM-generated. Compatibility feedback is not sent
+through the task-feedback beautifier.
 
 Provider selection is deployment-side only:
 

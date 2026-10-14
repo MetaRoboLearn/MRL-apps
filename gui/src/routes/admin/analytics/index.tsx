@@ -177,8 +177,8 @@ function RouteComponent() {
                         <td className="max-w-64 whitespace-normal px-3 py-2 font-medium">{task.task_label}</td>
                         <td className="px-3 py-2">{formatDifficulty(task.task_difficulty)}</td>
                         <td className="px-3 py-2">{formatMetric(task.success_rate)}%</td>
-                        <td className="px-3 py-2">{formatMetric(task.average_duration_seconds)}s</td>
-                        <td className="px-3 py-2">{formatMetric(task.median_duration_seconds)}s</td>
+                        <td className="px-3 py-2">{task.average_duration_seconds === null ? '—' : formatDuration(task.average_duration_seconds)}</td>
+                        <td className="px-3 py-2">{task.median_duration_seconds === null ? '—' : formatDuration(task.median_duration_seconds)}</td>
                         <td className="px-3 py-2">{formatMetric(task.average_failures)}</td>
                         <td className="px-3 py-2">{formatMetric(task.average_edits_to_success)}</td>
                         <td className="px-3 py-2">{formatMetric(task.average_final_solution_complexity)}</td>

@@ -76,7 +76,7 @@ function RouteComponent() {
   }
 
   return (
-    <div className="readable-content mx-auto w-full max-w-3xl p-6 md:p-8">
+    <div className="readable-content w-full p-6 md:p-8">
       <h1 className="mb-6 text-2xl font-bold">Dodaj zadatak u aktivnost</h1>
       <ActivityTaskForm
         types={types}

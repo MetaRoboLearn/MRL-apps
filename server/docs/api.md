@@ -73,7 +73,7 @@ For the detailed analyzer evidence shape, planner selection rules, generation/pr
 # Analytics feedback
 | Action | Path | Params / Body | Return | Description |
 |--------|------|---------------|--------|-------------|
-| POST | `/api/analytics/llm_feedback` | `{ user_started_task_id: positive integer }` | `{ suggestion, used_fallback, fallback_sections, fallback_reasons }` | Teacher/admin only. The backend resolves the submission code and task analysis through the role-aware analytics dataset. The browser does not send code, analysis, provider mode, or credentials. The suggestion is a browser-local teacher draft until Assign/Update. |
+| POST | `/api/analytics/llm_feedback` | `{ user_started_task_id: positive integer }` | `{ suggestion, used_fallback, fallback_sections, fallback_reasons }` | Teacher/admin only. The backend resolves the submission code and task analysis through the role-aware analytics dataset. The browser does not send code, analysis, provider mode, or credentials. The suggestion is a browser-local teacher draft until Assign/Update; normal task feedback is returned as one connected paragraph of multiple sentences after validated section generation, with the deterministic ordered assembly used when beautification fails. |
 
 Provider failures return `{ error, code }`. The `code` is one of `configuration`, `timeout`, `rate_limit`, `authentication`, `invalid_response`, or `provider`; success responses use deterministic fallback text when a generated section fails validation or provider generation.
 
