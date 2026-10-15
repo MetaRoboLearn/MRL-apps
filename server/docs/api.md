@@ -77,4 +77,8 @@ For the detailed analyzer evidence shape, planner selection rules, generation/pr
 
 Provider failures return `{ error, code }`. The `code` is one of `configuration`, `timeout`, `rate_limit`, `authentication`, `invalid_response`, or `provider`; success responses use deterministic fallback text when a generated section fails validation or provider generation.
 
+When a configured task has only `not_detected` expected elements, the feedback
+response uses one hardcoded encouragement message containing a generic question.
+This intentional path does not call the LLM and does not set `used_fallback`.
+
 Provider mode and credentials are configured only on the backend with `LLM_FEEDBACK_PROVIDER`, `LLM_FEEDBACK_LOCAL_API_BASE`, `LLM_FEEDBACK_LOCAL_MODEL`, `LLM_FEEDBACK_GEMINI_API_KEY`, and `LLM_FEEDBACK_GEMINI_MODEL`. Gemini requests use the official `google-genai` Python SDK, which selects the API endpoint.

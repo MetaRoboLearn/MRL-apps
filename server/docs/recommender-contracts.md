@@ -231,6 +231,15 @@ empty/null, and `code_standard_analysis` is retained in the plan. The generator
 then requests one `compatibility_comment`; it does not produce the normal task
 recommendation/reflection sections for this case. Instead it writes a "generic" feedback noting how well the code was written (ex. variable naming used, in which section of the code were functions defined, how were imports handled)
 
+When `expected_elements` is non-empty and every expected element has status
+`not_detected`, the planner returns `source: "all_not_detected"` without a
+reflection target. This path is selected solely from the element statuses and
+applies regardless of the detection method. The generator skips all provider
+and beautify calls and returns one hardcoded encouragement message containing a
+generic question. This is an intentional response mode, not provider fallback.
+Mixed statuses, including `detected_with_issue`, continue through the normal
+recommendation flow.
+
 The planner currently has no generic issue identity or severity threshold. It strictly uses `position` (defined by ROC weight) as importance.
 Additional-problem distinctness is based on element identity and the linked
 syntax issue.

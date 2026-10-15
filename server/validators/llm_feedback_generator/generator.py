@@ -16,6 +16,12 @@ from .llm_provider import FeedbackProvider, ProviderError, get_provider
 
 _NUMERIC_GRADE = re.compile(r"\b\d+(?:[.,]\d+)?\s*/\s*5\b|\b(?:ocjena|bodovi)\s*:?\s*\d+", re.IGNORECASE)
 _SENTENCE_END = re.compile(r"[.!?](?=\s|$)")
+_ALL_NOT_DETECTED_MESSAGE = (
+    "Svaki pokušaj je važan! 😊 U tvojem programu još nisu pronađene naredbe i dijelovi "
+    "koda koji se očekuju u ovom zadatku. Pogledaj ponovno upute i razmisli kako možeš "
+    "poboljšati svoje rješenje. Što bi mogao dodati ili promijeniti u svojem programu "
+    "kako bi robot uspješno izvršio zadatak?"
+)
 
 
 def _generate_one(
@@ -66,6 +72,14 @@ def generate_feedback(
         raise ValueError("code is required")
 
     feedback_plan = build_feedback_plan(task_analysis, code_standard_analysis)
+    if feedback_plan.get("source") == "all_not_detected":
+        return {
+            "suggestion": _ALL_NOT_DETECTED_MESSAGE,
+            "used_fallback": False,
+            "fallback_sections": [],
+            "fallback_reasons": [],
+        }
+
     generation_requests = build_generation_requests(
         feedback_plan,
         code,

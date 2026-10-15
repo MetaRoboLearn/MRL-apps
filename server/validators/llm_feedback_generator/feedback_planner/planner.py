@@ -89,6 +89,19 @@ def build_feedback_plan(
             "code_standard_analysis": code_standard_analysis or {},
         }
 
+    if all(element.get("status") == "not_detected" for element in expected_elements):
+        return {
+            "source": "all_not_detected",
+            "syntax_valid": analysis.get("syntax_valid"),
+            "detection_method": analysis.get("detection_method"),
+            "syntax_error": analysis.get("syntax_error"),
+            "praises": [],
+            "completion_statement": None,
+            "main_recommendation": None,
+            "additional_recommendation": None,
+            "reflection_question": None,
+        }
+
     detected = [
         element for element in expected_elements
         if element.get("status") == "detected" and element.get("evidence")
