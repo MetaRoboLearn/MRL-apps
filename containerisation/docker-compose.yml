@@ -19,6 +19,8 @@ services:
       - redis
     environment:
       - REDIS_URL=redis://redis:6379/0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../server/static/uploads/badges:/app/static/uploads/badges
       - ../server/static/stickers:/app/static/stickers
@@ -33,24 +35,16 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # Let's Encrypt certificates (DuckDNS) - mount entire letsencrypt dir
-      - /etc/letsencrypt:/etc/letsencrypt:ro
       # Webroot for Let's Encrypt challenges (zero-downtime renewals)
-      - /var/www/certbot:/var/www/certbot:ro      # Models directory (vehicle GLBs + models.json config) - swap models without rebuild
-      - ../gui/public/models:/usr/share/nginx/html/models      # For self-signed certificates (testing): use Docker volume
-      # - ssl_certs:/etc/nginx/ssl
+      - /var/www/certbot:/var/www/certbot:ro
+      # Host-provided pilot certificate for the public IP
+      - ./certs:/etc/nginx/ssl:ro
+      # Models directory (vehicle GLBs + models.json config) - swap models without rebuild
+      - ../gui/public/models:/usr/share/nginx/html/models:ro
       # Badge images - served directly by nginx
       - ../server/static/uploads/badges:/usr/share/nginx/static/uploads/badges:ro
     depends_on:
       - backend
-    networks:
-      - default
-      - shared-proxy
 
 volumes:
   redis_data:
-  ssl_certs:
-
-networks:
-  shared-proxy:
-    external: true

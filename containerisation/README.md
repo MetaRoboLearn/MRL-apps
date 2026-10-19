@@ -10,7 +10,7 @@ containerisation/
 └── nginx/
     ├── Dockerfile       # Multi-stage: builds React frontend + serves via nginx
     ├── nginx.conf       # HTTP→HTTPS redirect, SPA routing, API/WS proxy
-    └── entrypoint.sh    # Auto-generates a self-signed TLS cert on first start
+    └── entrypoint.sh    # Verifies the host-provided TLS certificate
 ```
 
 The production stack has two services:
@@ -46,6 +46,11 @@ cd MRL-apps
 cp containerisation/.env.example containerisation/.env
 ```
 
+Create the pilot certificate on the host before starting the stack. Place the
+certificate and private key at `containerisation/certs/fullchain.pem` and
+`containerisation/certs/privkey.pem`. The Nginx container mounts this directory
+read-only and refuses to start if either file is missing.
+
 Open `containerisation/.env` and fill in every value:
 
 ```env
@@ -53,10 +58,9 @@ Open `containerisation/.env` and fill in every value:
 DATABASE_URL=postgresql+psycopg2://<user>:<password>@<host>:<port>/<dbname>
 
 FLASK_SECRET_KEY=<long-random-hex-string>
-FLASK_ENV=production
 
-# URL the browser uses — https://localhost for local, https://yourdomain.com for production
-CORS_ORIGIN=https://localhost
+# URL the browser uses — use https://SERVER_PUBLIC_IP for the pilot
+CORS_ORIGIN=https://SERVER_PUBLIC_IP
 
 # Optional – only needed when a physical robot broker is connected
 BROKER_API_URL=http://<broker-host>:8000
@@ -89,7 +93,10 @@ Docker will:
 2. Build the nginx image (compiles the React/Vite frontend inside it as a multi-stage build)
 3. Start both containers
 
-On the **first start** nginx automatically generates a self-signed TLS certificate and stores it in the `ssl_certs` Docker volume so it persists across restarts.
+Nginx uses the certificate mounted from `containerisation/certs/`. For the
+public-IP pilot, create a self-signed certificate whose subject alternative
+name contains the server IP. The private key stays on the host and the mount is
+read-only inside the container.
 
 ### 4 · Run database migrations
 
@@ -103,8 +110,8 @@ docker compose -f containerisation/docker-compose.yml exec backend flask db upgr
 
 | URL | Notes |
 |-----|-------|
-| `https://localhost` | Web application (HTTPS) |
-| `http://localhost` | Automatically redirects to HTTPS |
+| `https://SERVER_PUBLIC_IP` | Web application (HTTPS) |
+| `http://SERVER_PUBLIC_IP` | Automatically redirects to HTTPS |
 
 > Your browser will warn about the self-signed certificate.  
 > Click **Advanced → Proceed** (Chrome) or **Accept the Risk** (Firefox).  
@@ -179,18 +186,9 @@ docker compose -f containerisation/docker-compose.yml exec backend flask db down
 
 ## 🔒 Using a real TLS certificate
 
-Replace the auto-generated cert with one from Let's Encrypt, mkcert, or your CA:
-
-1. Obtain `server.crt` and `server.key` for your domain.
-2. Use a bind-mount in `containerisation/docker-compose.yml` instead of the volume:
-
-```yaml
-# nginx service – replace the ssl_certs volume mount with:
-volumes:
-  - ./certs:/etc/nginx/ssl   # folder must contain server.crt and server.key
-```
-
-The entrypoint script skips certificate generation when both files already exist.
+For a later DNS deployment, replace the files in `containerisation/certs/` with
+a trusted certificate and private key. The Nginx configuration already reads
+`fullchain.pem` and `privkey.pem` from that directory.
 
 ---
 
