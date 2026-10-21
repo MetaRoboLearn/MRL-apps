@@ -123,7 +123,7 @@ export function StudentTaskCard({ card, onAssign, onUpdate, onUnassign, onSugges
 
       <section className="border-t border-gray-200 pt-4">
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h3 className="font-semibold text-gray-800">Značka</h3>
+          <h3 className="font-semibold text-gray-800">Dodjela savjeta i značke</h3>
           {card.badge_definition ? <span className="text-gray-500">{card.badge_definition.title}</span> : <span className="text-gray-500">Nema značke povezane s ovim zadatkom</span>}
         </div>
         {card.badge_definition && (
