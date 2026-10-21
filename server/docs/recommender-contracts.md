@@ -234,7 +234,7 @@ recommendation/reflection sections for this case. Instead it writes a "generic" 
 When `expected_elements` is non-empty and every expected element has status
 `not_detected`, the planner returns `source: "all_not_detected"` without a
 reflection target. This path is selected solely from the element statuses and
-applies regardless of the detection method. The generator skips all provider
+applies regardless of the detection method. In `default` style, the generator skips all provider
 and beautify calls and returns one hardcoded encouragement message containing a
 generic question. This is an intentional response mode, not provider fallback.
 Mixed statuses, including `detected_with_issue`, continue through the normal
@@ -287,6 +287,8 @@ pre-beautify ordered assembly is returned. The completion statement
 is server-controlled, not LLM-generated. Compatibility feedback is not sent
 through the task-feedback beautifier.
 
+When `FEEDBACK_GENERATOR_ANSWER_STYLE` is `shortened` and the plan is task feedback (`task_analysis` or `all_not_detected`), the generator adds one `introduction` request. Its exclamation is chosen from the server-selected opening category: `all_detected`, `incomplete`, or `short_not_detected`. The last applies to all-`not_detected` plans whose submitted code has at most five non-empty lines. The praise, recommendation, and reflection sentences reuse the same per-section requests as `default`. The server merges validated sentences into the introduction, an optional `Ovo si dobro napravio:` bullet list, an optional `Ovo bi mogao bolje provjeriti:` bullet list, and a final reflection question. A `beautify_variant_2` request may only add simple Croatian connecting words. The server rejects output that changes line count, headings, bullet markers, the introduction, or the reflection's final `?`, or that adds content words; it then returns the merged text and records a fallback. In shortened mode, all-`not_detected` plans get one guidance recommendation and reflection instead of the provider-free encouragement message. The compatibility path keeps its default behavior.
+
 Provider selection is deployment-side only:
 
 | Setting | Behavior |
@@ -296,10 +298,12 @@ Provider selection is deployment-side only:
 | `LLM_FEEDBACK_LOCAL_MODEL` | LM Studio model; defaults to `google/gemma-4-26b-a4b-qat` |
 | `LLM_FEEDBACK_GEMINI_API_KEY` | Required for `remote`; keep as a protected deployment secret |
 | `LLM_FEEDBACK_GEMINI_MODEL` | Required model ID for `remote` |
+| `FEEDBACK_GENERATOR_ANSWER_STYLE` | `default` (default) or `shortened`; missing or invalid values use `default` |
 
 The provider factory caches one provider per backend worker process. Both
 adapters support up to four concurrent section requests. LM Studio retries a
-timeout/connection failure once; the Gemini adapter retries transient 5xx
+timeout/connection failure once; the Gemini adapter waits a random 0.5-1 second
+before each request to spread concurrent load, and retries transient 5xx
 responses once. See [`.env.example`](../../containerisation/.env.example) for
 configuration placeholders.
 

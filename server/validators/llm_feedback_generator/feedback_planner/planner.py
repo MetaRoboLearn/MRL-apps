@@ -70,9 +70,47 @@ def _syntax_region(
     return "opći strukturni dio koda"
 
 
+def _syntax_recommendation(
+    analysis: dict[str, Any],
+    expected_elements: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    syntax_error = analysis.get("syntax_error")
+    if analysis.get("syntax_valid") is not False or not isinstance(syntax_error, dict):
+        return None
+    return {
+        "kind": "syntax_error",
+        "element_id": None,
+        "name": None,
+        "status": "detected_with_issue",
+        "position": None,
+        "description": None,
+        "evidence": [],
+        "syntax_error": syntax_error,
+        "syntax_region": _syntax_region(expected_elements, syntax_error),
+    }
+
+
+def _reflection_question(target: dict[str, Any], reflection_goal: str) -> dict[str, Any]:
+    return {
+        "reflection_goal": reflection_goal,
+        "kind": target["kind"],
+        "element_id": target.get("element_id"),
+        "name": target.get("name"),
+        "status": target.get("status"),
+        "description": target.get("description"),
+        "position": target.get("position"),
+        "topic": target.get("name") or "pogreška sintakse",
+        "evidence": target.get("evidence", []),
+        "syntax_error": target.get("syntax_error"),
+        "syntax_region": target.get("syntax_region"),
+    }
+
+
 def build_feedback_plan(
     task_analysis: dict[str, Any] | None,
     code_standard_analysis: dict[str, Any] | None = None,
+    *,
+    include_all_not_detected_guidance: bool = False,
 ) -> dict[str, Any]:
     """Select evidence-backed feedback sections without generating their wording."""
     analysis = task_analysis if isinstance(task_analysis, dict) else {}
@@ -90,6 +128,9 @@ def build_feedback_plan(
         }
 
     if all(element.get("status") == "not_detected" for element in expected_elements):
+        guidance = None
+        if include_all_not_detected_guidance:
+            guidance = _syntax_recommendation(analysis, expected_elements) or _plan_item(expected_elements[0])
         return {
             "source": "all_not_detected",
             "syntax_valid": analysis.get("syntax_valid"),
@@ -97,9 +138,11 @@ def build_feedback_plan(
             "syntax_error": analysis.get("syntax_error"),
             "praises": [],
             "completion_statement": None,
-            "main_recommendation": None,
+            "main_recommendation": guidance,
             "additional_recommendation": None,
-            "reflection_question": None,
+            "reflection_question": (
+                _reflection_question(guidance, "address_selected_issue") if guidance else None
+            ),
         }
 
     detected = [
@@ -112,21 +155,7 @@ def build_feedback_plan(
     ]
 
     syntax_error = analysis.get("syntax_error")
-    syntax_recommendation = (
-        {
-            "kind": "syntax_error",
-            "element_id": None,
-            "name": None,
-            "status": "detected_with_issue",
-            "position": None,
-            "description": None,
-            "evidence": [],
-            "syntax_error": syntax_error,
-            "syntax_region": _syntax_region(expected_elements, syntax_error),
-        }
-        if analysis.get("syntax_valid") is False and isinstance(syntax_error, dict)
-        else None
-    )
+    syntax_recommendation = _syntax_recommendation(analysis, expected_elements)
 
     all_detected = len(detected) == len(expected_elements)
 
@@ -148,23 +177,10 @@ def build_feedback_plan(
         reflection_target = _plan_item(detected[0])
     reflection_question = None
     if reflection_target:
-        reflection_question = {
-            "reflection_goal": (
-                "refine_existing_code"
-                if all_detected and main_recommendation is None
-                else "address_selected_issue"
-            ),
-            "kind": reflection_target["kind"],
-            "element_id": reflection_target.get("element_id"),
-            "name": reflection_target.get("name"),
-            "status": reflection_target.get("status"),
-            "description": reflection_target.get("description"),
-            "position": reflection_target.get("position"),
-            "topic": reflection_target.get("name") or "pogreška sintakse",
-            "evidence": reflection_target.get("evidence", []),
-            "syntax_error": reflection_target.get("syntax_error"),
-            "syntax_region": reflection_target.get("syntax_region"),
-        }
+        reflection_question = _reflection_question(
+            reflection_target,
+            "refine_existing_code" if all_detected and main_recommendation is None else "address_selected_issue",
+        )
 
     return {
         "source": "task_analysis",

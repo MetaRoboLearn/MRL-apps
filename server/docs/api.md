@@ -73,12 +73,12 @@ For the detailed analyzer evidence shape, planner selection rules, generation/pr
 # Analytics feedback
 | Action | Path | Params / Body | Return | Description |
 |--------|------|---------------|--------|-------------|
-| POST | `/api/analytics/llm_feedback` | `{ user_started_task_id: positive integer }` | `{ suggestion, used_fallback, fallback_sections, fallback_reasons }` | Teacher/admin only. The backend resolves the submission code and task analysis through the role-aware analytics dataset. The browser does not send code, analysis, provider mode, or credentials. The suggestion is a browser-local teacher draft until Assign/Update; normal task feedback is returned as one connected paragraph of multiple sentences after validated section generation, with the deterministic ordered assembly used when beautification fails. |
+| POST | `/api/analytics/llm_feedback` | `{ user_started_task_id: positive integer }` | `{ suggestion, used_fallback, fallback_sections, fallback_reasons }` | Teacher/admin only. The backend resolves the submission code and task analysis through the role-aware analytics dataset. The browser does not send code, analysis, provider mode, or credentials. The suggestion is a browser-local teacher draft until Assign/Update; in `default` style, normal task feedback is returned as one connected paragraph of multiple sentences after validated section generation, with the deterministic ordered assembly used when beautification fails. |
 
 Provider failures return `{ error, code }`. The `code` is one of `configuration`, `timeout`, `rate_limit`, `authentication`, `invalid_response`, or `provider`; success responses use deterministic fallback text when a generated section fails validation or provider generation.
 
 When a configured task has only `not_detected` expected elements, the feedback
-response uses one hardcoded encouragement message containing a generic question.
+response uses, in `default` style, one hardcoded encouragement message containing a generic question.
 This intentional path does not call the LLM and does not set `used_fallback`.
 
-Provider mode and credentials are configured only on the backend with `LLM_FEEDBACK_PROVIDER`, `LLM_FEEDBACK_LOCAL_API_BASE`, `LLM_FEEDBACK_LOCAL_MODEL`, `LLM_FEEDBACK_GEMINI_API_KEY`, and `LLM_FEEDBACK_GEMINI_MODEL`. Gemini requests use the official `google-genai` Python SDK, which selects the API endpoint.
+Provider mode and credentials are configured only on the backend with `LLM_FEEDBACK_PROVIDER`, `LLM_FEEDBACK_LOCAL_API_BASE`, `LLM_FEEDBACK_LOCAL_MODEL`, `LLM_FEEDBACK_GEMINI_API_KEY`, and `LLM_FEEDBACK_GEMINI_MODEL`. `FEEDBACK_GENERATOR_ANSWER_STYLE` selects the `default` or `shortened` answer layout. Gemini requests use the official `google-genai` Python SDK, which selects the API endpoint.

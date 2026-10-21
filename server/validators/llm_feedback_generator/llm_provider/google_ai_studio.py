@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import httpx
+import random
 import time
 from typing import Any
 
@@ -21,6 +22,8 @@ class GoogleAiStudioProvider:
         )
 
     def generate_text(self, system_prompt: str, user_prompt: str) -> str:
+        # Spread concurrent section requests to reduce Gemini 503 overload bursts.
+        time.sleep(random.uniform(0.5, 1.0))
         response: Any = None
         for attempt in range(2):
             try:

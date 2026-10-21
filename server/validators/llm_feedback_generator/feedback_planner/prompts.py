@@ -12,6 +12,8 @@ GenerationKind = Literal[
     "reflection_question",
     "compatibility_comment",
     "beautify",
+    "introduction",
+    "beautify_variant_2",
 ]
 
 
@@ -59,6 +61,46 @@ _BEAUTIFY_INSTRUCTIONS = (
     "jedan odlomak bez prijeloma retka, navodnika ili Markdowna."
 )
 
+_INTRODUCTION_INSTRUCTIONS = (
+    "Napiši jednu kratku, toplu uzvičnu rečenicu kao uvod povratne informacije. Polje "
+    "opening_category određuje ton i značenje: all_detected znači da je rješenje potpuno i da nema "
+    "preporuka za doradu; incomplete znači da učenik ide dobrim putem, ali treba još "
+    "rada; short_not_detected znači da je kod vrlo kratak i učenik još ne zna kako krenuti. "
+    "Ne moraš koristiti točne izraze, ali značenje i ton moraju odgovarati kategoriji. "
+    "Ne opisuj provjeru koda, nego govori o dojmu o rješenju. "
+    "Završi uskličnikom (!) i ne dodaj ništa nakon njega."
+)
+
+_BEAUTIFY_VARIANT_2_INSTRUCTIONS = (
+    "Dobit ćeš već sastavljen odgovor u polju structured_feedback. Prvi redak je uvod, zatim slijede "
+    "naslovi, točkasti popisi i pitanje na kraju. Cilj je samo da tekst zvuči prirodnije. Veznik smiješ "
+    "dodati samo tamo gdje stvarno povezuje dvije misli, obično unutar rečenice, na primjer zato, jer, "
+    "ali, ipak, osim toga ili kako bi. Većina redaka može ostati nepromijenjena. Nemoj dodavati veznik "
+    "na početak retka, nemoj ga stavljati na svaki redak i nemoj ga dodavati kao puko punilo bez značenja. "
+    "Nemoj mijenjati uvod ni naslove, nemoj dodavati ni brisati retke ni točkice, nemoj mijenjati "
+    "redoslijed i nemoj dodavati nove činjenice, preporuke, tvrdnje ili brojčane ocjene. Zadnji redak "
+    "mora ostati pitanje koje završava upitnikom. Vrati samo cijeli odgovor u istom obliku, bez Markdowna."
+)
+
+_PLAIN_SYSTEM_KINDS = frozenset({"beautify", "beautify_variant_2"})
+
+_CONCISE_KINDS = frozenset({
+    "praise",
+    "main_recommendation",
+    "additional_recommendation",
+   # "reflection_question",
+})
+_CONCISE_INSTRUCTIONS = (
+    "Odgovor neka bude vrlo kratak: najviše 12 riječi u jednoj rečenici, bez nabrajanja "
+    "i bez dodatnih objašnjenja."
+)
+
+_INTRODUCTION_FALLBACKS = {
+    "all_detected": "Bravo!",
+    "incomplete": "Vidim da se trudiš!",
+    "short_not_detected": "Vidim da ne znaš kako krenuti!",
+}
+
 _SECTION_INSTRUCTIONS: dict[GenerationKind, str] = {
     "praise": "Napiši jednu konkretnu rečenicu pohvale za odabrani pronađeni element.",
     "main_recommendation": (
@@ -90,6 +132,8 @@ _SECTION_INSTRUCTIONS: dict[GenerationKind, str] = {
         "analize koda. Ne dodaj elemente zadatka koji nisu navedeni."
     ),
     "beautify": _BEAUTIFY_INSTRUCTIONS,
+    "introduction": _INTRODUCTION_INSTRUCTIONS,
+    "beautify_variant_2": _BEAUTIFY_VARIANT_2_INSTRUCTIONS,
 }
 
 
@@ -136,13 +180,17 @@ def _syntax_line_range(item: dict[str, Any]) -> str:
 def _request(
     kind: GenerationKind,
     context: dict[str, Any],
+    *,
+    concise: bool = False,
 ) -> GenerationRequest:
     serialized_context = json.dumps(context, ensure_ascii=False, separators=(",", ":"))
     system_prompt = (
         f"{_SECTION_INSTRUCTIONS[kind]}"
-        if kind == "beautify"
+        if kind in _PLAIN_SYSTEM_KINDS
         else f"{_BASE_INSTRUCTIONS} {_SECTION_INSTRUCTIONS[kind]}"
     )
+    if concise and kind in _CONCISE_KINDS:
+        system_prompt = f"{system_prompt} {_CONCISE_INSTRUCTIONS}"
     return GenerationRequest(
         kind=kind,
         system_prompt=system_prompt,
@@ -182,6 +230,8 @@ def build_generation_requests(
     code: str,
     task_title: str | None = None,
     task_preview: str | None = None,
+    *,
+    concise: bool = False,
 ) -> list[GenerationRequest]:
     """Build isolated wording requests for exactly the sections selected by the planner."""
     if plan.get("source") == "coding_standard_compatibility":
@@ -197,6 +247,7 @@ def build_generation_requests(
         requests.append(_request(
             "praise",
             {"selected_item": item, "code_evidence": _evidence_excerpt(item, code)},
+            concise=concise,
         ))
     for kind in ("main_recommendation", "additional_recommendation"):
         item = plan.get(kind)
@@ -204,6 +255,7 @@ def build_generation_requests(
             requests.append(_request(
                 kind,
                 _recommendation_context(item, code, task_title, task_preview),
+                concise=concise,
             ))
     item = plan.get("reflection_question")
     if item:
@@ -219,7 +271,7 @@ def build_generation_requests(
             reflection_context["syntax_line_range"] = _syntax_line_range(item)
         else:
             reflection_context["code_evidence"] = _evidence_excerpt(item, code)
-        requests.append(_request("reflection_question", reflection_context))
+        requests.append(_request("reflection_question", reflection_context, concise=concise))
     return requests
 
 
@@ -228,12 +280,24 @@ def build_beautify_request(section_text: dict[str, Any]) -> GenerationRequest:
     return _request("beautify", {"sections": section_text})
 
 
+def build_introduction_request(opening_category: str) -> GenerationRequest:
+    """Build the shortened-feedback opening request for one special-case category."""
+    return _request("introduction", {"opening_category": opening_category})
+
+
+def build_shortened_beautify_request(structured_feedback: str) -> GenerationRequest:
+    """Build a connector-only pass over an already merged shortened feedback skeleton."""
+    return _request("beautify_variant_2", {"structured_feedback": structured_feedback})
+
+
 def fallback_text(request: GenerationRequest) -> str:
     """Return a Croatian sentence when a provider fails or returns empty text."""
     if request.kind == "compatibility_comment":
         return "Pregledaj svoj kod i provjeri možeš li dodatno doraditi rješenje."
 
     context = json.loads(request.user_prompt.split("\n", 1)[1])
+    if request.kind == "introduction":
+        return _INTRODUCTION_FALLBACKS.get(context.get("opening_category"), "Vidim da se trudiš!")
     if request.kind == "reflection_question":
         if context.get("reflection_goal") == "refine_existing_code":
             return "Koju bi malu promjenu mogao/la isprobati u ovom dijelu programa?"
