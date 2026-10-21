@@ -36,6 +36,16 @@ _BASE_INSTRUCTIONS = (
     "koje mogu promijeniti odabrani plan."
 )
 
+_NEUTRAL_TONE_INSTRUCTIONS = (
+    "Ovo nije pohvala ni pozdrav: ne hvali učenika, ne koristi riječi poput bravo, super ili odlično "
+    "i ne počinji rečenicu pozdravom poput bok ili hej. Ne koristi uskličnik."
+)
+
+_PRAISE_TONE_INSTRUCTIONS = (
+    "Ovo je jedina sekcija u kojoj su pohvalne riječi i uskličnik dopušteni, ali ne počinji "
+    "rečenicu pozdravom poput bok ili hej."
+)
+
 _RECOMMENDATION_INSTRUCTIONS = (
     "Napiši jednu kratku i nenametljivu naznaku koja učenika usmjerava prema sljedećem "
     "koraku, ali ne otkriva rješenje. Polje guidance_goal određuje smjer, a recommendation_topic "
@@ -47,7 +57,8 @@ _RECOMMENDATION_INSTRUCTIONS = (
     "rasporeda naredbi bez navođenja ispravka. Ako je riječ o sintaktičkoj pogrešci, izravno uputi "
     "učenika da pregleda točno navedeni redak ili raspon u općem području navedenom u syntax_region. "
     "Nemoj navesti parserovu poruku, stupac, izvorni redak, nedostajući znak, točan problem ili "
-    "točnu izmjenu. Izvadak koda koristi samo kao pozadinu i nemoj ga citirati."
+    "točnu izmjenu. Izvadak koda koristi samo kao pozadinu i nemoj ga citirati. "
+    f"{_NEUTRAL_TONE_INSTRUCTIONS}"
 )
 
 _BEAUTIFY_INSTRUCTIONS = (
@@ -91,7 +102,7 @@ _CONCISE_KINDS = frozenset({
    # "reflection_question",
 })
 _CONCISE_INSTRUCTIONS = (
-    "Odgovor neka bude vrlo kratak: najviše 12 riječi u jednoj rečenici, bez nabrajanja "
+    "Odgovor neka bude u jednoj rečenici, bez nabrajanja "
     "i bez dodatnih objašnjenja."
 )
 
@@ -102,7 +113,13 @@ _INTRODUCTION_FALLBACKS = {
 }
 
 _SECTION_INSTRUCTIONS: dict[GenerationKind, str] = {
-    "praise": "Napiši jednu konkretnu rečenicu pohvale za odabrani pronađeni element.",
+    "praise": (
+        "Napiši jednu konkretnu rečenicu pohvale za odabrani pronađeni element, povezanu s ciljem zadatka iz polja task_title i task_preview. Naziv pronađenog elementa ne prepisuj doslovno, nego ga prirodno parafraziraj. "
+        "Ne spominji kod, redak ni identifikatore iz koda; govori o tome što je korištenje elementa "
+        "omogućilo u smislu zadatka. Ako cilj zadatka nije naveden, napiši općenitu pohvalu o elementu "
+        "bez tvrdnji o kodu. "
+        f"{_PRAISE_TONE_INSTRUCTIONS}"
+    ),
     "main_recommendation": (
         "Napiši jednu kratku i nenametljivu preporuku za glavni problem. "
         f"{_RECOMMENDATION_INSTRUCTIONS}"
@@ -125,6 +142,7 @@ _SECTION_INSTRUCTIONS: dict[GenerationKind, str] = {
         "Ako kontekst sadrži syntax_region, možeš se osvrnuti na to opće područje koda, ali nemoj "
         "navesti broj retka, parserovu poruku, stupac, izvorni redak, nedostajući znak ili točnu "
         "izmjenu. "
+        f"{_NEUTRAL_TONE_INSTRUCTIONS} "
         "Završi upitnikom (?) i nakon njega ne dodaj ništa."
     ),
     "compatibility_comment": (
@@ -246,7 +264,11 @@ def build_generation_requests(
     for item in plan.get("praises", []):
         requests.append(_request(
             "praise",
-            {"selected_item": item, "code_evidence": _evidence_excerpt(item, code)},
+            {
+                "praise_focus": "task_goal",
+                "praised_element": item.get("name"),
+                **_task_context(task_title, task_preview),
+            },
             concise=concise,
         ))
     for kind in ("main_recommendation", "additional_recommendation"):
@@ -303,10 +325,8 @@ def fallback_text(request: GenerationRequest) -> str:
             return "Koju bi malu promjenu mogao/la isprobati u ovom dijelu programa?"
         return "Što bi programu moglo pomoći da ostvari cilj ovog zadatka?"
 
-    item = context.get("selected_item", {})
-    name = item.get("name") or "odabrani dio koda"
     if request.kind == "praise":
-        return f"Lijepo si upotrijebio/la element: {name}."
+        return f"Lijepo si koristio/la {context.get('praised_element') or 'element'}."
     if context.get("guidance_goal") == "code_structure":
         region = context.get("syntax_region") or "opći strukturni dio koda"
         line_range = context.get("syntax_line_range") or "nepoznatom retku"
