@@ -22,7 +22,7 @@ function ProtectedLayout() {
   }, [user, loading, location.pathname, navigate]);
 
   if (loading) {
-    return <div className="w-full h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="w-full h-screen flex items-center justify-center" role="status" aria-live="polite">Učitavanje...</div>;
   }
 
   if (!user && location.pathname !== '/login') {

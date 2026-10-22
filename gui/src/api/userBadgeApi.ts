@@ -1,10 +1,11 @@
-import {UserBadgeEntry} from "../types/userBadgeTypes.ts";
+import { BadgeAssignment } from '../types/analyticsTypes.ts'
+import { BadgeCatalogEntry, UserBadgeEntry } from "../types/userBadgeTypes.ts";
 
 export const getUserBadges = async (userId: string): Promise<UserBadgeEntry[]> => {
   const response = await fetch(`/api/users/${userId}/badges`, {
     credentials: 'include',
   })
-  if (!response.ok) throw new Error('Failed to fetch user badges')
+  if (!response.ok) throw new Error('Značke korisnika nije moguće učitati.')
   return response.json()
 }
 
@@ -12,16 +13,16 @@ export const assignBadge = async (data: {
   user_id: number
   badge_id: number
   comment?: string
-}) => {
-  const response = await fetch('/api/user-badges', {
+}): Promise<BadgeAssignment> => {
+  const response = await fetch('/api/user-badges/', {
     credentials: 'include',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to assign badge')
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Dodjela značke nije uspjela.')
   }
   return response.json()
 }
@@ -32,16 +33,32 @@ export const removeBadge = async (userBadgeId: number) => {
     method: 'DELETE',
   })
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error || 'Failed to remove badge')
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Uklanjanje značke nije uspjelo.')
   }
   return response.json()
 }
 
-export const getMyBadges = async (): Promise<UserBadgeEntry[]> => {
-  const response = await fetch('/api/user-badges/my', {
+export const updateBadgeComment = async (userBadgeId: number, comment: string): Promise<BadgeAssignment> => {
+  const response = await fetch(`/api/user-badges/${userBadgeId}`, {
+    credentials: 'include',
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Spremanje komentara značke nije uspjelo.')
+  }
+  return response.json()
+}
+
+export const getMyBadges = async (
+  filter: 'all' | 'assigned' | 'unassigned' = 'all',
+): Promise<BadgeCatalogEntry[]> => {
+  const response = await fetch(`/api/user-badges/my?filter=${filter}`, {
     credentials: 'include',
   })
-  if (!response.ok) throw new Error('Failed to fetch badges')
+  if (!response.ok) throw new Error('Značke nije moguće učitati.')
   return response.json()
 }

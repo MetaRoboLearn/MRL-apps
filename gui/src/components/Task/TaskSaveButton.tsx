@@ -62,7 +62,7 @@ const TaskSaveButton = () => {
   return (
     <button onClick={handleSave} disabled={isPending}
             className={`bg-emerald-500 text-light-cyan-200 font-display font-bold text-xl pl-5 pr-8 py-2 rounded flex items-center ml-2 mr-6
-          ${false ? 'bg-emerald-700' : 'hover:cursor-pointer hover:bg-emerald-600'} transition`}>
+          ${isPending ? 'bg-emerald-700 cursor-not-allowed' : 'hover:cursor-pointer hover:bg-emerald-600'} transition`}>
       <FaPlus />
       <span className={'ml-4'}>{isPending ? "Spremanje..." : mode === "create" ? "Dodaj" : "Spremi"}</span>
     </button>

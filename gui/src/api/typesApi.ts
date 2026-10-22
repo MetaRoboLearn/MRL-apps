@@ -11,7 +11,7 @@ export const getTypes = async (): Promise<TaskType[]> => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch types');
+    throw new Error(error.error || 'Vrste zadataka nije moguće učitati.');
   }
 
   return response.json();

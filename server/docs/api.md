@@ -35,11 +35,23 @@
 # ActivityTask
 | Akcija | Path                                         | Params / Body                                                                                                       | Return              | Opis                                  |
 |--------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------|---------------------|---------------------------------------|
-| GET    | `/api/activity-tasks/<activity_task_id:int>` | /                                                                                                                   | ActivityTask        | Vraća ActivityTask po ID-u            |
+| GET    | `/api/activity-tasks/<activity_task_id:int>` | /                                                                                                                   | ActivityTask        | Vraća ActivityTask po ID-u, uključujući uređene `programming_element_ids` |
 | GET    | `/api/activity-tasks`                        | `skip=int` <br> `limit=int` <br> `activity_id=int` <br> `task_id=int` <br> `type_id=int` <br> `order_by_order=bool` | list[ActivityTask]  | Vraća listu ActivityTask-a            |
-| POST   | `/api/activity-tasks`                        | `activity_id=int` <br> `task_id=int` <br> `type_id=int` <br> `order=int` <br> `description=string`                  | ActivityTask        | Stvara novi ActivityTask              |
-| PATCH  | `/api/activity-tasks/<activity_task_id:int>` | `activity_id=int` <br> `task_id=int` <br> `type_id=int` <br> `order=int` <br> `description=string`                  | ActivityTask        | Ažurira ActivityTask po njegovom ID-u |
+| POST   | `/api/activity-tasks`                        | `activity_id=int` <br> `task_id=int` <br> `type_id=int` <br> `order=int` <br> `preview=string` <br> `instructions=string` <br> `programming_element_ids=list[string]` | ActivityTask | Stvara novi ActivityTask i sprema odabrane elemente redoslijedom iz liste |
+| PATCH  | `/api/activity-tasks/<activity_task_id:int>` | `activity_id=int` <br> `task_id=int` <br> `type_id=int` <br> `order=int` <br> `programming_element_ids=list[string]` | ActivityTask | Ažurira ActivityTask i odabrane elemente |
 | DELETE | `/api/activity-tasks/<activity_task_id:int>` | /                                                                                                                   | `{ deleted: true }` | Briše ActivityTask po njegovom ID-u   |
+
+`programming_element_ids` is optional on create and patch. When supplied, its list order is saved as positions starting at 1. IDs must exist in the read-only catalog, must be unique, and can only be assigned to Python activity tasks. Invalid lists or IDs return HTTP 400. The catalog itself has no application write endpoint.
+
+# ProgrammingElement
+| Akcija | Path                         | Params / Body | Return | Opis |
+|--------|------------------------------|---------------|--------|------|
+| GET    | `/api/programming-elements/` | /             | list[`{ id, name, description, element_type_id }`] | Vraća katalog elemenata nastavnicima i administratorima |
+
+# Task analysis contract
+Python analytics and student submission responses include `task_analysis`. It contains `syntax_valid`, `detection_method` (`AST` or `REGEX`), `syntax_error`, ordered `expected_elements`, and `weighted_completion`. Each expected element includes its canonical `element_id`, display `name`, `position`, ROC `weight`, evidence `count`, `status`, and source-coordinate `evidence`. The student submissions response omits positions, weights, and `weighted_completion`; teacher analytics retains them. A task without configured expected elements has an empty list and `weighted_completion: null`. Raw AST/regex output is used only inside the analyzer orchestrator and is not included in analytics records or API responses.
+
+For the detailed analyzer evidence shape, planner selection rules, generation/provider contract, and current differences from plan intent, see [Analyzer, planner, and LLM contracts](./recommender-contracts.md).
 
 # UserStartedTask
 | Akcija | Path                                                 | Params / Body                                                                                                                         | Return                | Opis                                     |
@@ -57,3 +69,16 @@
 | GET    | `/api/user-task-logs`              | `skip=int` <br> `limit=int` <br> `user_started_task_id=int` <br> `event_type_id=int` <br> `order_by_created_at=bool` | list[UserTaskLog]   | Vraća listu UserTaskLog-a          |
 | POST   | `/api/user-task-logs`              | `user_started_task_id=int` <br> `event_type_id=int` <br> `code_snapshot=string`                                      | UserTaskLog         | Stvara novi UserTaskLog            |
 | DELETE | `/api/user-task-logs/<log_id:int>` | /                                                                                                                    | `{ deleted: true }` | Briše UserTaskLog po njegovom ID-u |
+
+# Analytics feedback
+| Action | Path | Params / Body | Return | Description |
+|--------|------|---------------|--------|-------------|
+| POST | `/api/analytics/llm_feedback` | `{ user_started_task_id: positive integer }` | `{ suggestion, used_fallback, fallback_sections, fallback_reasons }` | Teacher/admin only. The backend resolves the submission code and task analysis through the role-aware analytics dataset. The browser does not send code, analysis, provider mode, or credentials. The suggestion is a browser-local teacher draft until Assign/Update; in `default` style, normal task feedback is returned as one connected paragraph of multiple sentences after validated section generation, with the deterministic ordered assembly used when beautification fails. |
+
+Provider failures return `{ error, code }`. The `code` is one of `configuration`, `timeout`, `rate_limit`, `authentication`, `invalid_response`, or `provider`; success responses use deterministic fallback text when a generated section fails validation or provider generation.
+
+When a configured task has only `not_detected` expected elements, the feedback
+response uses, in `default` style, one hardcoded encouragement message containing a generic question.
+This intentional path does not call the LLM and does not set `used_fallback`.
+
+Provider mode and credentials are configured only on the backend with `LLM_FEEDBACK_PROVIDER`, `LLM_FEEDBACK_LOCAL_API_BASE`, `LLM_FEEDBACK_LOCAL_MODEL`, `LLM_FEEDBACK_GEMINI_API_KEY`, and `LLM_FEEDBACK_GEMINI_MODEL`. `FEEDBACK_GENERATOR_ANSWER_STYLE` selects the `default` or `shortened` answer layout. Gemini requests use the official `google-genai` Python SDK, which selects the API endpoint.

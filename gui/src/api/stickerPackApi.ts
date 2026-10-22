@@ -11,7 +11,7 @@ export interface PackStickerMeta {
 
 export const getStickerPacks = async (): Promise<StickerPack[]> => {
   const res = await fetch('/api/stickers/packs', { credentials: 'include' });
-  if (!res.ok) throw new Error('Failed to fetch sticker packs');
+  if (!res.ok) throw new Error('Pakete naljepnica nije moguće učitati.');
   return res.json();
 };
 
@@ -19,7 +19,7 @@ export const getPackStickers = async (packName: string): Promise<PackStickerMeta
   const res = await fetch(`/api/stickers/pack/${encodeURIComponent(packName)}`, {
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Failed to fetch stickers for pack: ${packName}`);
+  if (!res.ok) throw new Error(`Naljepnice iz paketa nije moguće učitati: ${packName}`);
   return res.json();
 };
 

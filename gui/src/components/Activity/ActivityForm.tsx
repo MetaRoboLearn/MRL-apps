@@ -32,16 +32,16 @@ export function ActivityForm({ activity, onSubmit, isLoading, error, cancelTo }:
     const newErrors: Record<string, string> = {};
 
     if (!title.trim()) {
-      newErrors.title = 'Title is required';
+      newErrors.title = 'Naslov je obavezan.';
     }
     if (!timeFrom) {
-      newErrors.time_from = 'Start time is required';
+      newErrors.time_from = 'Vrijeme početka je obavezno.';
     }
     if (!timeTo) {
-      newErrors.time_to = 'End time is required';
+      newErrors.time_to = 'Vrijeme završetka je obavezno.';
     }
     if (timeFrom && timeTo && timeFrom >= timeTo) {
-      newErrors.time_to = 'End time must be after start time';
+      newErrors.time_to = 'Vrijeme završetka mora biti nakon vremena početka.';
     }
 
     setErrors(newErrors);
@@ -70,42 +70,42 @@ export function ActivityForm({ activity, onSubmit, isLoading, error, cancelTo }:
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6">
+    <form onSubmit={handleSubmit} className="readable-content rounded-lg border border-gray-200 bg-white p-6">
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-300 bg-red-100 p-3 text-red-700" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium mb-1">Title *</label>
+          <label htmlFor="title" className="mb-1 block font-medium">Naslov *</label>
           <input
             type="text"
             id="title"
             value={title}
             onChange={(e) => { setTitle(e.target.value); clearError('title'); }}
             className={`w-full px-3 py-2 border rounded-md ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
-            placeholder="Activity title"
+            placeholder="Naslov aktivnosti"
           />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>
+          <label htmlFor="description" className="mb-1 block font-medium">Opis</label>
           <input
             type="text"
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            placeholder="Optional description"
+            placeholder="Neobavezni opis"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Start Time *</label>
+            <label className="mb-1 block font-medium">Vrijeme početka *</label>
             <DatePicker
               selected={timeFrom}
               onChange={(date: Date | null) => { setTimeFrom(date); clearError('time_from'); }}
@@ -120,7 +120,7 @@ export function ActivityForm({ activity, onSubmit, isLoading, error, cancelTo }:
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">End Time *</label>
+            <label className="mb-1 block font-medium">Vrijeme završetka *</label>
             <DatePicker
               selected={timeTo}
               onChange={(date: Date | null) => { setTimeTo(date); clearError('time_to'); }}
@@ -142,14 +142,14 @@ export function ActivityForm({ activity, onSubmit, isLoading, error, cancelTo }:
           disabled={isLoading}
           className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Saving...' : isEditing ? 'Update Activity' : 'Create Activity'}
+          {isLoading ? 'Spremanje...' : isEditing ? 'Ažuriraj aktivnost' : 'Stvori aktivnost'}
         </button>
         <button
           type="button"
           onClick={() => navigate({ to: cancelTo || '/admin/activities' })}
           className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Cancel
+          Odustani
         </button>
       </div>
     </form>

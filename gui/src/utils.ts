@@ -11,3 +11,15 @@ export const formatLocalDateTime = (utcString: string): string => {
   const minutes = date.getMinutes().toString().padStart(2, '0')
   return `${day}.${month}.${year}, ${hours}:${minutes}`
 }
+
+export const formatDuration = (durationSeconds: number): string => {
+  const seconds = Math.max(0, Math.round(Number.isFinite(durationSeconds) ? durationSeconds : 0))
+  if (seconds < 60) return `${seconds} s`
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} min ${seconds % 60} s`
+
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  return remainingMinutes ? `${hours} h ${remainingMinutes} min` : `${hours} h`
+}

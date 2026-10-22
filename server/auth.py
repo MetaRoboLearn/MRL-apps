@@ -26,7 +26,7 @@ def init_auth(app):
 
     @login_manager.unauthorized_handler
     def unauthorized():
-        return jsonify({"error": "Authentication required"}), 401
+        return jsonify({"error": "Potrebna je prijava."}), 401
 
 
 def role_required(*role_names):
@@ -42,7 +42,7 @@ def role_required(*role_names):
         @login_required
         def wrapped(*args, **kwargs):
             if current_user.role.name not in role_names:
-                return jsonify({"error": "Insufficient permissions"}), 403
+                return jsonify({"error": "Nemate potrebne ovlasti."}), 403
             return f(*args, **kwargs)
         return wrapped
     return decorator

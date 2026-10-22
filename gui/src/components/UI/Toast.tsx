@@ -27,16 +27,23 @@ const Toast = ({message, close}: Props) => {
   });
 
   return (
-    <div className={`toast toast-error ${isExiting ? 'toast-exit' : 'toast-enter'}`}>
+    <div
+      className={`toast toast-error ${isExiting ? 'toast-exit' : 'toast-enter'}`}
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+    >
       <p className={'toast-text'}>{message}</p>
       <button
+        type="button"
         onClick={() => {
           setIsExiting(true);
           setTimeout(close, 300);
         }}
+        aria-label="Zatvori obavijest"
         className={'toast-close'}
       >
-        {"\u2573"}
+        <span aria-hidden="true">×</span>
       </button>
     </div>
   );

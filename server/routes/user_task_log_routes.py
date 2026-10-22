@@ -21,7 +21,7 @@ def create_log():
     required = ("user_started_task_id", "event_type_id")
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
 
     with db_session() as session:
         log_repo = UserTaskLogRepository(session)
