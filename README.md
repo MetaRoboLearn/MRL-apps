@@ -19,3 +19,16 @@ _Code_ is a responsive web application created using the following:
 
 ## 📝 License
 This project is licensed under the MIT License.
+
+---
+
+## 🐳 Running with Docker
+
+See [`containerisation/README.md`](containerisation/README.md) for the full guide covering:
+- First-time setup and environment configuration
+- Building and starting the production stack (nginx + HTTPS)
+- Running database migrations
+- Redeploying after a new commit / rolling back
+- Using a real TLS certificate
+- Local development setup
+

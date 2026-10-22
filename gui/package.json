@@ -1,0 +1,51 @@
+{
+  "name": "metarobolearn-code",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@blockly/continuous-toolbox": "^7.0.3",
+    "@monaco-editor/react": "^4.7.0",
+    "@react-three/drei": "^10.0.5",
+    "@react-three/fiber": "^9.1.0",
+    "@tailwindcss/vite": "^4.0.12",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-router": "^1.159.5",
+    "@tanstack/react-router-devtools": "^1.159.5",
+    "@tanstack/react-table": "^8.21.3",
+    "@types/three": "^0.174.0",
+    "blockly": "^12.3.1",
+    "react": "^19.0.0",
+    "react-datepicker": "^9.1.0",
+    "react-dom": "^19.0.0",
+    "react-icons": "^5.5.0",
+    "slate": "^0.123.0",
+    "slate-history": "^0.113.1",
+    "slate-react": "^0.123.0",
+    "socket.io-client": "^4.8.1",
+    "tailwindcss": "^4.0.12",
+    "three": "^0.174.0",
+    "three-stdlib": "^2.35.14",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@tanstack/router-plugin": "^1.159.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.39.3",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^15.15.0",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.24.1",
+    "vite": "^6.3.5"
+  }
+}

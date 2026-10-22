@@ -1,0 +1,45 @@
+{
+  "default_path": "/models/Car.glb",
+  "models": [
+    {
+      "id": "car",
+      "name": "Car",
+      "path": "/models/Car.glb",
+      "offset": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [0.14, 0.16, 0.16]
+      }
+    },
+    {
+      "id": "robo_ranger",
+      "name": "Robo Ranger",
+      "path": "/models/RoboRanger-v1.glb",
+      "offset": {
+        "position": [0.07, 0.37, -0.05],
+        "rotation": [0, 0, 0],
+        "scale": [0.14, 0.16, 0.16]
+      }
+    },
+    {
+      "id": "robot_farm",
+      "name": "Robot Farma",
+      "path": "/models/robot-farma.glb",
+      "offset": {
+        "position": [-0.07, 0, 0.05],
+        "rotation": [0, -1.5707963267948966, 0],
+        "scale": [0.14, 0.16, 0.16]
+      }
+    },
+    {
+      "id": "robot_svemir",
+      "name": "Robot Svemir",
+      "path": "/models/robot-svemir.glb",
+      "offset": {
+        "position": [-0.07, 0, 0.05],
+        "rotation": [0, -1.5707963267948966, 0],
+        "scale": [0.14, 0.16, 0.16]
+      }
+    }
+  ]
+}

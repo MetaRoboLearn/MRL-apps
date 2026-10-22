@@ -1,0 +1,56 @@
+services:
+
+  # ── Redis (shared state for multi-worker setup) ───────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  # ── Flask backend (gunicorn + gevent) ───────────────────────────────────────
+  backend:
+    build:
+      context: ../server
+    restart: unless-stopped
+    env_file: .env
+    # DATABASE_URL is read directly from .env
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ../server/static/uploads/badges:/app/static/uploads/badges
+      - ../server/static/stickers:/app/static/stickers
+
+  # ── Nginx (HTTPS + static frontend + API/WebSocket proxy) ──────────────────
+  nginx:
+    build:
+      context: ..                                   # project root
+      dockerfile: containerisation/nginx/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Let's Encrypt certificates (DuckDNS) - mount entire letsencrypt dir
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Webroot for Let's Encrypt challenges (zero-downtime renewals)
+      - /var/www/certbot:/var/www/certbot:ro      # Models directory (vehicle GLBs + models.json config) - swap models without rebuild
+      - ../gui/public/models:/usr/share/nginx/html/models      # For self-signed certificates (testing): use Docker volume
+      # - ssl_certs:/etc/nginx/ssl
+      # Badge images - served directly by nginx
+      - ../server/static/uploads/badges:/usr/share/nginx/static/uploads/badges:ro
+    depends_on:
+      - backend
+    networks:
+      - default
+      - shared-proxy
+
+volumes:
+  redis_data:
+  ssl_certs:
+
+networks:
+  shared-proxy:
+    external: true

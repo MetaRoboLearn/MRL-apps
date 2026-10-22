@@ -1,0 +1,7 @@
+# Virtual enviorments
+venv
+.env
+
+__pycache__
+
+static/uploads/

@@ -1,15 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# DEVELOPMENT ONLY  –  no HTTPS, no nginx, hot-reload friendly
+# For the full production stack (nginx + HTTPS + PostgreSQL) use:
+#   docker compose -f containerisation/docker-compose.yml up --build
+# ─────────────────────────────────────────────────────────────────────────────
 services:
-  frontend:
-    build:
-      context: .
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
     ports:
-      - "3000:3000"
-    depends_on:
-      - backend
+      - "6379:6379"
 
   backend:
     build:
       context: ./server
-    command: python server.py
+    restart: unless-stopped
+    env_file: containerisation/.env
+    # DATABASE_URL comes from containerisation/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     ports:
-      - "8000:8000"
+      - "5000:5000"
+    volumes:
+      - ./server/static/uploads/badges:/app/static/uploads/badges
+    command: python app.py
+    depends_on:
+      - redis
+    volumes:
+      - ./server/static/stickers:/app/static/stickers
+
+  frontend:
+    build:
+      context: ./gui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./gui/public/models:/app/public/models

@@ -2,3 +2,16 @@ flask
 flask_cors
 psycopg[binary]
 psycopg_pool
+sqlalchemy
+psycopg2-binary
+Flask-Migrate
+python-dotenv
+flask-sock
+requests
+websocket-client
+bcrypt
+flask_login
+gunicorn
+gevent
+gevent-websocket
+redis

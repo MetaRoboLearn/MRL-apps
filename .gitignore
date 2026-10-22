@@ -1,30 +1,16 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
 .idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+node_modules
 
-# Virtual enviorments
-venv
+# Environment files – never commit secrets
 .env
+.env.local
+.env.*.local
+containerisation/.env
 
-__pycache__
+# SSL certificates – generated at runtime
+nginx/ssl/
+containerisation/nginx/ssl/
+
+# Backups – generated at runtime
+containerisation/backups/
+containerisation/backup_cron.log
