@@ -7,7 +7,7 @@ export const getUserStartedTask = async (activityTaskId: string): Promise<UserSt
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch user started task');
+    throw new Error(error.error || 'Započeti zadatak nije moguće učitati.');
   }
 
   return response.json();
@@ -23,7 +23,7 @@ export const createUserStartedTask = async (activityTaskId: number) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to create user started task');
+    throw new Error(error.error || 'Pokretanje zadatka nije uspjelo.');
   }
 
   return response.json();
@@ -39,7 +39,7 @@ export const updateUserStartedTask = async (ustId: number, data: { current_value
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to update user started task');
+    throw new Error(error.error || 'Ažuriranje započetog zadatka nije uspjelo.');
   }
 
   return response.json();

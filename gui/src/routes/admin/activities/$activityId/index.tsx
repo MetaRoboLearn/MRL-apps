@@ -44,48 +44,48 @@ const columnHelper = createColumnHelper<ActivityTask>()
 const columns = [
   columnHelper.display({
     id: 'reorder',
-    header: 'Order',
+    header: 'Redoslijed',
     cell: ({ row }) => <ReorderButtons activityTask={row.original} />,
   }),
   columnHelper.accessor('task_id', {
-    header: 'Task ID',
+    header: 'ID zadatka',
     cell: (info) => info.getValue(),
   }),
   columnHelper.accessor('task_title', {
-    header: 'Task Title',
+    header: 'Naslov zadatka',
     cell: (info) => info.getValue() || '—',
   }),
   columnHelper.accessor('preview', {
-    header: 'Preview',
+    header: 'Sažetak',
     cell: (info) => info.getValue() || '—',
   }),
   columnHelper.accessor('task_type', {
-    header: 'Type',
+    header: 'Vrsta',
     cell: (info) => info.getValue() || '—',
   }),
   columnHelper.accessor('allows_robot', {
     header: 'Robot',
     cell: (info) => (
       <span className={info.getValue() ? 'text-green-600' : 'text-red-600'}>
-        {info.getValue() ? 'Yes' : 'No'}
+        {info.getValue() ? 'Da' : 'Ne'}
       </span>
     ),
   }),
   columnHelper.accessor('is_logged', {
-    header: 'Logged',
+    header: 'Bilježi se (logging)',
     cell: (info) => (
       <span className={info.getValue() ? 'text-green-600' : 'text-red-600'}>
-        {info.getValue() ? 'Yes' : 'No'}
+        {info.getValue() ? 'Da' : 'Ne'}
       </span>
     ),
   }),
   columnHelper.accessor('student_mode', {
-    header: 'Student mode',
+    header: 'Način odabira učenika',
     cell: (info) => {
         const mode = info.getValue()
-        if (mode === 'all') return <span className="text-gray-500">All</span>
-        if (mode === 'include') return <span className="text-blue-600">Specific</span>
-        return <span className="text-orange-600">Excluded</span>
+        if (mode === 'all') return <span className="text-gray-500">Svi učenici</span>
+        if (mode === 'include') return <span className="text-blue-600">Odabrani učenici</span>
+        return <span className="text-orange-600">Isključeni učenici</span>
     },
   }),
   columnHelper.display({
@@ -104,7 +104,7 @@ const columns = [
     cell: ({ row }) => <RemoveButton activityTask={row.original} />,
   }),
     columnHelper.accessor('creator', {
-    header: 'Created By',
+    header: 'Stvorio',
     cell: (info) => {
       const creator = info.getValue()
       if (!creator) return '—'
@@ -132,7 +132,7 @@ function EditTaskButton({ activityTaskId }: { activityTaskId: number }) {
       }
       className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-md transition-colors"
     >
-      Edit
+      Uredi
     </button>
   )
 }
@@ -151,7 +151,7 @@ function StudentsButton({ activityTaskId }: { activityTaskId: number }) {
       }
       className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-md transition-colors"
     >
-      Students
+      Učenici
     </button>
   )
 }
@@ -203,7 +203,7 @@ function RemoveButton({ activityTask }: { activityTask: ActivityTask }) {
   })
 
   const handleRemove = () => {
-    if (!confirm('Are you sure you want to remove this task?')) return
+    if (!confirm('Jeste li sigurni da želite ukloniti ovaj zadatak?')) return
     mutation.mutate()
   }
 
@@ -213,7 +213,7 @@ function RemoveButton({ activityTask }: { activityTask: ActivityTask }) {
       disabled={mutation.isPending}
       className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded-md transition-colors disabled:opacity-50"
     >
-      {mutation.isPending ? '...' : 'Remove'}
+      {mutation.isPending ? '...' : 'Ukloni'}
     </button>
   )
 }
@@ -233,18 +233,18 @@ function DeleteActivityButton() {
   return (
     <button
       onClick={() => {
-        if (!confirm('Are you sure you want to delete this activity?')) return
+        if (!confirm('Jeste li sigurni da želite obrisati ovu aktivnost?')) return
         mutation.mutate()
       }}
       disabled={hasTasks || mutation.isPending}
-      title={hasTasks ? 'Remove all tasks before deleting' : 'Delete activity'}
+      title={hasTasks ? 'Prije brisanja uklonite sve zadatke' : 'Obriši aktivnost'}
       className={`px-4 py-2 text-white text-sm rounded-md transition-colors ${
         hasTasks
           ? 'bg-gray-300 cursor-not-allowed'
           : 'bg-red-500 hover:bg-red-600'
       }`}
     >
-      {mutation.isPending ? 'Deleting...' : 'Delete Activity'}
+      {mutation.isPending ? 'Brisanje...' : 'Obriši aktivnost'}
     </button>
   )
 }
@@ -262,48 +262,48 @@ function RouteComponent() {
   })
 
   return (
-    <div className="p-4">
+    <div className="readable-content p-6 md:p-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">{activity.title}</h1>
         <button
           onClick={() => navigate({ to: '/admin/activities' })}
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Back to Activities
+          Natrag na aktivnosti
         </button>
       </div>
 
       {/* Activity Details Card */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <div className="flex justify-between items-start mb-4">
-          <h2 className="text-lg font-semibold">Activity Details</h2>
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <h2 className="text-lg font-semibold">Detalji aktivnosti</h2>
             <div className="flex gap-2">
               <button
                 onClick={() => navigate({ to: '/admin/activities/$activityId/edit', params: { activityId } })}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-md transition-colors"
               >
-                Edit Activity
+                Uredi aktivnost
               </button>
               <DeleteActivityButton />
             </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <span className="font-medium text-gray-600">Description</span>
+            <span className="font-medium text-gray-600">Opis</span>
             <p className="mt-1">{activity.description || '—'}</p>
           </div>
           <div>
             <span className="font-medium text-gray-600">Status</span>
             <p className="mt-1">
               <span className={activity.active ? 'text-green-600' : 'text-red-600'}>
-                {activity.active ? 'Active' : 'Inactive'}
+                {activity.active ? 'Aktivna' : 'Neaktivna'}
               </span>
             </p>
           </div>
           <div>
-            <span className="font-medium text-gray-600">Created By</span>
+            <span className="font-medium text-gray-600">Stvorio</span>
             <p className="mt-1">
               {activity.creator
                 ? `${activity.creator.first_name} ${activity.creator.last_name} (@${activity.creator.username})`
@@ -311,29 +311,29 @@ function RouteComponent() {
             </p>
           </div>
           <div>
-            <span className="font-medium text-gray-600">Start Time</span>
+            <span className="font-medium text-gray-600">Vrijeme početka</span>
             <p className="mt-1">{activity.time_from ? formatLocalDateTime(activity.time_from) : '—'}</p>
           </div>
           <div>
-            <span className="font-medium text-gray-600">Created At</span>
+            <span className="font-medium text-gray-600">Stvoreno</span>
             <p className="mt-1">{formatLocalDateTime(activity.created_at)}</p>
           </div>
           <div>
-            <span className="font-medium text-gray-600">End Time</span>
+            <span className="font-medium text-gray-600">Vrijeme završetka</span>
             <p className="mt-1">{activity.time_to ? formatLocalDateTime(activity.time_to) : '—'}</p>
           </div>
         </div>
       </div>
 
       {/* Tasks Section */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Tasks</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold">Zadaci</h2>
         <button
           onClick={() => navigate({to: '/admin/activities/$activityId/tasks/add', params: {activityId}})}
           className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium flex items-center gap-2"
         >
           <span>+</span>
-          Add Task
+          Dodaj zadatak
         </button>
       </div>
 
@@ -359,7 +359,7 @@ function RouteComponent() {
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="border border-gray-300 px-4 py-8 text-center text-gray-500">
-                  No tasks assigned yet. Click "Add Task" to get started.
+                  Još nema dodijeljenih zadataka. Kliknite „Dodaj zadatak” za početak.
                 </td>
               </tr>
             ) : (

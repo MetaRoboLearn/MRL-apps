@@ -37,6 +37,12 @@ class ActivityTask(Base):
     activity = relationship('Activity', back_populates='activity_tasks')
     task = relationship('Task')
     type = relationship('Type')
+    programming_elements = relationship(
+        'ActivityTaskProgrammingElement',
+        back_populates='activity_task',
+        cascade='all, delete-orphan',
+        order_by='ActivityTaskProgrammingElement.position',
+    )
 
     creator = relationship('User', foreign_keys="ActivityTask.created_by")
     updater = relationship('User', foreign_keys="ActivityTask.updated_by")

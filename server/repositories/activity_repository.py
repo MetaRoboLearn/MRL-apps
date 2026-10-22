@@ -4,8 +4,10 @@ from typing import Optional
 from sqlalchemy.orm import Session, joinedload, aliased
 from sqlalchemy import or_, exists
 
+from access_policies import owns_activity
 from models import ActivityTask, User
 from models.activity import Activity
+from models.user_activity_task import UserActivityTask
 from repositories.base_repository import BaseRepository
 from utils import utc_now
 
@@ -24,6 +26,25 @@ class ActivityRepository(BaseRepository[Activity]):
             .filter(Activity.id == activity_id)
             .first()
         )
+
+    def find_inaccessible_ids(self, user, activity_ids) -> list[int]:
+        """Return requested activity ids the user cannot read (missing ids included)."""
+        if not activity_ids:
+            return []
+        requested = set(activity_ids)
+        fetched = (
+            self.session.query(Activity)
+            .options(joinedload(Activity.activity_tasks))
+            .filter(Activity.id.in_(requested))
+            .all()
+        )
+        inaccessible = {
+            activity.id
+            for activity in fetched
+            if not owns_activity(user, activity)
+        }
+        inaccessible |= requested - {activity.id for activity in fetched}
+        return sorted(inaccessible)
 
     # ---------- LIST ----------
     def list(self, *, skip: int = 0, limit: int = 50, active_only: Optional[bool] = None, search: Optional[str] = None, order_by_time_from: bool = True) -> list[Activity]:
@@ -73,8 +94,43 @@ class ActivityRepository(BaseRepository[Activity]):
 
         return q.offset(skip).limit(limit).all()
 
+    def list_owned_activities_with_tasks(self, *, user_id: int, is_admin: bool, active_only: bool = True):
+        """Return activities allowed in teacher-owned analytics/form selectors."""
+        q = (
+            self.session.query(Activity)
+            .options(
+                joinedload(Activity.activity_tasks).joinedload(ActivityTask.task),
+                joinedload(Activity.activity_tasks).joinedload(ActivityTask.type),
+                joinedload(Activity.creator),
+            )
+        )
+        if active_only:
+            q = q.filter(Activity.active.is_(True))
+        if not is_admin:
+            q = q.filter(Activity.created_by == user_id)
+        return q.order_by(Activity.time_from.asc().nullslast(), Activity.id.asc()).all()
+
     # ---------- READ ALL ACTIVITIES AVAILABLE TO STUDENTS ----------
-    def list_student_available_activities(self):
+    @staticmethod
+    def _student_task_is_available(activity_task, assigned_task_ids, now):
+        activity = activity_task.activity
+        if (
+            not activity
+            or not activity.active
+            or activity.time_from is None
+            or activity.time_to is None
+            or activity.time_from > now
+            or activity.time_to < now
+        ):
+            return False
+
+        if activity_task.student_mode == 'include':
+            return activity_task.id in assigned_task_ids
+        if activity_task.student_mode == 'exclude':
+            return activity_task.id not in assigned_task_ids
+        return True
+
+    def list_student_available_activities(self, user_id: int):
         now = utc_now()
         q = (
             self.session.query(Activity)
@@ -90,7 +146,39 @@ class ActivityRepository(BaseRepository[Activity]):
             .filter(Activity.time_to >= now)
         )
 
-        return q.all()
+        activities = q.all()
+        assigned_task_ids = {
+            row[0]
+            for row in self.session.query(UserActivityTask.activity_task_id)
+            .filter(UserActivityTask.user_id == user_id)
+            .all()
+        }
+
+        available_activities = []
+        for activity in activities:
+            available_tasks = [
+                activity_task
+                for activity_task in sorted(activity.activity_tasks, key=lambda item: item.order)
+                if self._student_task_is_available(activity_task, assigned_task_ids, now)
+            ]
+            if available_tasks:
+                available_activities.append((activity, available_tasks))
+
+        return available_activities
+
+    def is_student_task_available(self, activity_task_id: int, user_id: int) -> bool:
+        now = utc_now()
+        activity_task = self.session.get(ActivityTask, activity_task_id)
+        if not activity_task:
+            return False
+
+        assigned_task_ids = {
+            row[0]
+            for row in self.session.query(UserActivityTask.activity_task_id)
+            .filter(UserActivityTask.user_id == user_id)
+            .all()
+        }
+        return self._student_task_is_available(activity_task, assigned_task_ids, now)
 
     # ---------- CREATE ----------
     def create(

@@ -25,7 +25,7 @@ def login():
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
+        return jsonify({"error": "Korisničko ime i lozinka su obavezni."}), 400
 
     with db_session() as session:
         user = (
@@ -36,10 +36,10 @@ def login():
         )
 
         if not user or not user.active:
-            return jsonify({"error": "Invalid credentials"}), 401
+            return jsonify({"error": "Neispravni podaci za prijavu."}), 401
 
         if not bcrypt.checkpw(password.encode("utf-8"), user.password_hash.encode("utf-8")):
-            return jsonify({"error": "Invalid credentials"}), 401
+            return jsonify({"error": "Neispravni podaci za prijavu."}), 401
 
         user.last_login = utc_now()
         session.commit()
@@ -53,7 +53,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return jsonify({"message": "Logged out"}), 200
+    return jsonify({"message": "Odjava je uspješna."}), 200
 
 
 @bp.route("/me", methods=["GET"])

@@ -31,11 +31,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://backend:5000',
         changeOrigin: true,
         ws: true,
       },
-      '/static': 'http://localhost:5000',
+      '/static': 'http://backend:5000',
     }
   },
   preview: {

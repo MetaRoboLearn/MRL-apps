@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 
 from auth import role_required
 from database import db_session
+from repositories.activity_repository import ActivityRepository
 from repositories.user_started_task_repository import UserStartedTaskRepository
 from utils import parse_boolean_param, _to_utc_iso, utc_now
 
@@ -55,17 +56,17 @@ def get_user_started_task_activity_task(activity_task_id: int):
         repo = UserStartedTaskRepository(session)
         ust = repo.get_by_user_activity_task(activity_task_id, current_user.id)
         if not ust:
-            return jsonify({"error": "UserStartedTask not found for that activity task"}), 404
+            return jsonify({"error": "Započeti zadatak za taj zadatak aktivnosti nije pronađen."}), 404
 
         if ust.is_finished:
-            return jsonify({"error": "Task is already finished"}), 400
+            return jsonify({"error": "Zadatak je već završen."}), 400
 
         activity = ust.activity_task.activity if ust.activity_task else None
         if activity:
             if not activity.active:
-                return jsonify({"error": "Activity is no longer active"}), 403
+                return jsonify({"error": "Aktivnost više nije aktivna."}), 403
             if activity.time_to and activity.time_to < utc_now():
-                return jsonify({"error": "Activity has expired"}), 403
+                return jsonify({"error": "Aktivnost je istekla."}), 403
 
         return jsonify(_user_started_task_to_dict(ust)), 200
 
@@ -102,12 +103,17 @@ def create_user_started_task():
     required = ("activity_task_id", )
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
 
     with db_session() as session:
+        activity_repository = ActivityRepository(session)
+        activity_task_id = int(data["activity_task_id"])
+        if not activity_repository.is_student_task_available(activity_task_id, current_user.id):
+            return jsonify({"error": "Zadatak aktivnosti trenutačno nije dostupan."}), 403
+
         repo = UserStartedTaskRepository(session)
         ust = repo.create(
-            activity_task_id=int(data["activity_task_id"]),
+            activity_task_id=activity_task_id,
             actor_user_id=current_user.id,
         )
         return jsonify(_user_started_task_to_dict(ust)), 201
@@ -121,7 +127,7 @@ def update_user_started_task(ust_id: int):
     allowed = {"current_value"}
     unknown = [k for k in data.keys() if k not in allowed]
     if unknown:
-        return jsonify({"error": "Unknown fields", "unknown": unknown}), 400
+        return jsonify({"error": "Nepoznata polja.", "unknown": unknown}), 400
 
     with db_session() as session:
         repo = UserStartedTaskRepository(session)
@@ -131,7 +137,7 @@ def update_user_started_task(ust_id: int):
             actor_user_id=current_user.id,
         )
         if not ust:
-            return jsonify({"error": "UserStartedTask not found"}), 404
+            return jsonify({"error": "Započeti zadatak korisnika nije pronađen."}), 404
         return jsonify(_user_started_task_to_dict(ust)), 200
 
 
@@ -143,7 +149,7 @@ def delete_user_started_task(user_started_task_id: int):
         repo = UserStartedTaskRepository(session)
         ok = repo.delete(user_started_task_id)
         if not ok:
-            return jsonify({"error": "UserStartedTask not found"}), 404
+            return jsonify({"error": "Započeti zadatak korisnika nije pronađen."}), 404
         return jsonify({"deleted": True}), 200
 
 
@@ -154,5 +160,5 @@ def finish_task(ust_id: int):
         repo = UserStartedTaskRepository(session)
         ust = repo.finish(ust_id, actor_user_id=current_user.id)
         if not ust:
-            return jsonify({"error": "Not found"}), 404
+            return jsonify({"error": "Nije pronađeno."}), 404
         return jsonify({"finished": True}), 200

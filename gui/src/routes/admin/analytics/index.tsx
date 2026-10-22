@@ -1,0 +1,243 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { z } from 'zod'
+import { getGroupAnalytics } from '../../../api/analyticsApi.ts'
+import { getOwnedActivitiesOverview } from '../../../api/activitiesApi.ts'
+import { getGroups } from '../../../api/groupsApi.ts'
+import { getUsersByIds } from '../../../api/usersApi.ts'
+import { AnalyticsImageViewer } from '../../../components/Analytics/AnalyticsImageViewer.tsx'
+import { MultiSelectOption, SearchableMultiSelect } from '../../../components/Analytics/SearchableMultiSelect.tsx'
+import { GroupAnalyticsResponse } from '../../../types/analyticsTypes.ts'
+import { formatDuration } from '../../../utils.ts'
+
+const analyticsSearchSchema = z.object({
+  group_ids: z.array(z.number()).optional().default([]),
+  activity_ids: z.array(z.number()).optional().default([]),
+  include_unassigned: z.preprocess((value) => value === true || value === 'true', z.boolean()).optional().default(false),
+})
+
+type GroupSelectionId = number | 'unassigned'
+type StudentSortField = 'last_name' | 'attempts' | 'duration' | 'success_rate'
+type SortDirection = 'asc' | 'desc'
+
+export const Route = createFileRoute('/admin/analytics/')({
+  validateSearch: analyticsSearchSchema,
+  component: RouteComponent,
+})
+
+function RouteComponent() {
+  const search = Route.useSearch()
+  const [groupSelection, setGroupSelection] = useState<GroupSelectionId[]>(() => [
+    ...search.group_ids,
+    ...(search.include_unassigned ? ['unassigned' as const] : []),
+  ])
+  const [activityIds, setActivityIds] = useState(search.activity_ids)
+  const [studentSortField, setStudentSortField] = useState<StudentSortField>('last_name')
+  const [studentSortDirection, setStudentSortDirection] = useState<SortDirection>('asc')
+  const [result, setResult] = useState<GroupAnalyticsResponse | null>(null)
+  const [appliedFilters, setAppliedFilters] = useState({ groupIds: search.group_ids, activityIds: search.activity_ids, includeUnassigned: search.include_unassigned })
+
+  const groupsQuery = useQuery({ queryKey: ['analytics-groups'], queryFn: getGroups })
+  const activitiesQuery = useQuery({
+    queryKey: ['analytics-activities'],
+    queryFn: getOwnedActivitiesOverview,
+  })
+  const studentsQuery = useQuery({
+    queryKey: ['analytics-students', result?.student_ids],
+    queryFn: () => getUsersByIds(result?.student_ids || []),
+    enabled: Boolean(result?.student_ids.length),
+  })
+  const analyticsMutation = useMutation({
+    mutationFn: async () => {
+      const groupIds = groupSelection.filter((id): id is number => typeof id === 'number')
+      const includeUnassigned = groupSelection.includes('unassigned')
+      const filters = { groupIds: [...groupIds], activityIds: [...activityIds], includeUnassigned }
+      return { analytics: await getGroupAnalytics(filters), filters }
+    },
+    onSuccess: ({ analytics, filters }) => {
+      setResult(analytics)
+      setAppliedFilters(filters)
+    },
+  })
+
+  const groupOptions: MultiSelectOption<GroupSelectionId>[] = useMemo(
+    () => [
+      ...(groupsQuery.data || []).map((group) => ({ id: group.group_id, label: group.group_name })),
+      { id: 'unassigned', label: 'Neraspoređeno' },
+    ],
+    [groupsQuery.data],
+  )
+  const activityOptions: MultiSelectOption[] = useMemo(
+    () => (activitiesQuery.data || []).map((activity) => ({ id: activity.id, label: activity.title })),
+    [activitiesQuery.data],
+  )
+
+  const canCreate = groupSelection.length > 0 && activityIds.length > 0 && !analyticsMutation.isPending
+  const formatMetric = (value: number | null) => value === null ? '—' : Number(value.toFixed(2)).toString()
+  const formatDifficulty = (value: number | null) => value === null ? '—' : `${value}`
+  const studentMetricsById = useMemo(
+    () => new Map((result?.student_summary_table || []).map((metric) => [metric.student_id, metric])),
+    [result?.student_summary_table],
+  )
+  const orderedStudents = useMemo(
+    () => [...(studentsQuery.data || [])].sort((left, right) => {
+      const leftMetric = studentMetricsById.get(left.id)
+      const rightMetric = studentMetricsById.get(right.id)
+      const direction = studentSortDirection === 'asc' ? 1 : -1
+      let primaryOrder = 0
+
+      if (studentSortField === 'last_name') {
+        primaryOrder = left.last_name.localeCompare(right.last_name) * direction
+      } else {
+        const metricValues = {
+          attempts: [leftMetric?.total_attempt_count ?? 0, rightMetric?.total_attempt_count ?? 0],
+          duration: [leftMetric?.total_duration_seconds ?? 0, rightMetric?.total_duration_seconds ?? 0],
+          success_rate: [leftMetric?.success_rate_percent ?? 0, rightMetric?.success_rate_percent ?? 0],
+        }[studentSortField]
+        primaryOrder = (metricValues[0] - metricValues[1]) * direction
+      }
+
+      return primaryOrder
+        || left.last_name.localeCompare(right.last_name)
+        || left.first_name.localeCompare(right.first_name)
+        || left.id - right.id
+    }),
+    [studentsQuery.data, studentMetricsById, studentSortDirection, studentSortField],
+  )
+
+  return (
+    <main className="readable-content min-h-full overflow-y-auto bg-gray-50 p-6 md:p-8">
+      <div className="w-full">
+        <h1 className="mb-6 text-3xl font-bold text-gray-900">Analitika grupa</h1>
+
+        <section className="mb-6 rounded-md border border-gray-200 bg-white p-5">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end">
+            <SearchableMultiSelect
+              label="Grupe"
+              options={groupOptions}
+              selectedIds={groupSelection}
+              onChange={setGroupSelection}
+              loading={groupsQuery.isLoading}
+            />
+            <SearchableMultiSelect
+              label="Aktivnosti"
+              options={activityOptions}
+              selectedIds={activityIds}
+              onChange={setActivityIds}
+              loading={activitiesQuery.isLoading}
+            />
+            <button
+              type="button"
+              disabled={!canCreate}
+              onClick={() => analyticsMutation.mutate()}
+              className="min-h-10 rounded-md bg-turquoise-500 px-4 py-2 font-semibold text-white hover:bg-turquoise-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              {analyticsMutation.isPending ? 'Stvaranje...' : 'Pokreni analitiku'}
+            </button>
+          </div>
+          {analyticsMutation.error && <p className="mt-3 text-sm text-red-600">{analyticsMutation.error.message}</p>}
+          {groupSelection.length === 0 || activityIds.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-500">Odaberite barem jednu grupu ili neraspoređene učenike te aktivnost.</p>
+          ) : null }
+        </section>
+
+        {result && (
+          <div className="space-y-6">
+            <section className="rounded-md border border-gray-200 bg-white p-4">
+              <h2 className="mb-4 text-xl font-semibold text-gray-800">Sažetak</h2>
+              <table className="min-w-full border-collapse text-left">
+                <thead><tr className="border-b border-gray-200"><th scope="col" className="px-3 py-3">Metrika</th><th scope="col" className="px-3 py-3">Vrijednost</th></tr></thead>
+                <tbody>{result.summary_table.filter((metric) => metric.metric_name === 'students' || metric.metric_name === 'tasks').map((metric) => <tr key={metric.metric_name} className="border-b border-gray-100"><td className="px-3 py-2">{metric.metric_name === 'students' ? 'Učenici' : 'Zadaci'}</td><td className="px-3 py-2">{metric.value}</td></tr>)}</tbody>
+              </table>
+            </section>
+            <details className="rounded-md border border-gray-200 bg-white" open>
+              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Sažetak po zadatku</summary>
+              <div className="overflow-x-auto border-t border-gray-200 p-4">
+                <table className="min-w-[1100px] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="px-3 py-2">Zadatak</th>
+                      <th className="px-3 py-2">Razina strukture</th>
+                      <th className="px-3 py-2">Uspješnost</th>
+                      <th className="px-3 py-2">Prosj. trajanje</th>
+                      <th className="px-3 py-2">Medijan trajanja</th>
+                      <th className="px-3 py-2">Prosj. neuspjeha</th>
+                      <th className="px-3 py-2">Prosj. izmjena do uspjeha</th>
+                      <th className="px-3 py-2">Prosjek broja linija</th>
+                      <th className="px-3 py-2">Najmanji broj linija</th>
+                      <th className="px-3 py-2">Najveći broj linija</th>
+                      <th className="px-3 py-2">Broj pokušaja</th>
+                      <th className="px-3 py-2">Broj uspješnih</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.task_summary_table.map((task) => (
+                      <tr key={task.activity_task_id} className="border-b border-gray-100 align-top">
+                        <td className="max-w-64 whitespace-normal px-3 py-2 font-medium">{task.task_label}</td>
+                        <td className="px-3 py-2">{formatDifficulty(task.task_difficulty)}</td>
+                        <td className="px-3 py-2">{formatMetric(task.success_rate)}%</td>
+                        <td className="px-3 py-2">{task.average_duration_seconds === null ? '—' : formatDuration(task.average_duration_seconds)}</td>
+                        <td className="px-3 py-2">{task.median_duration_seconds === null ? '—' : formatDuration(task.median_duration_seconds)}</td>
+                        <td className="px-3 py-2">{formatMetric(task.average_failures)}</td>
+                        <td className="px-3 py-2">{formatMetric(task.average_edits_to_success)}</td>
+                        <td className="px-3 py-2">{formatMetric(task.average_final_solution_complexity)}</td>
+                        <td className="px-3 py-2">{formatMetric(task.min_task_complexity)}</td>
+                        <td className="px-3 py-2">{formatMetric(task.max_task_complexity)}</td>
+                        <td className="px-3 py-2">{task.attempting_students}</td>
+                        <td className="px-3 py-2">{task.successful_students}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+            <div className="flex flex-col gap-6">
+              <details open>
+                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Matrica uspješnosti</summary>
+                <AnalyticsImageViewer title="Matrica uspješnosti" src={result.heatmap_png} />
+              </details>
+              <details open>
+                <summary className="mb-2 cursor-pointer font-semibold text-gray-800">Raspodjela trajanja zadataka</summary>
+                <AnalyticsImageViewer title="Raspodjela trajanja zadataka" src={result.boxplot_png} />
+              </details>
+            </div>
+            <details className="rounded-md border border-gray-200 bg-white" open>
+              <summary className="cursor-pointer px-4 py-3 font-semibold text-gray-800">Učenici</summary>
+              <div className="overflow-x-auto border-t border-gray-200 p-4">
+                <div className="mb-4 flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <span>Poredaj prema</span>
+                    <select value={studentSortField} onChange={(event) => setStudentSortField(event.target.value as StudentSortField)} className="min-h-10 rounded-md border border-gray-300 bg-white px-3">
+                      <option value="last_name">Prezime</option>
+                      <option value="attempts">Broj pokretanja</option>
+                      <option value="duration">Ukupno vrijeme</option>
+                      <option value="success_rate">Uspješnost</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <span>Redoslijed</span>
+                    <select value={studentSortDirection} onChange={(event) => setStudentSortDirection(event.target.value as SortDirection)} className="min-h-10 rounded-md border border-gray-300 bg-white px-3">
+                      <option value="asc">Uzlazno</option>
+                      <option value="desc">Silazno</option>
+                    </select>
+                  </label>
+                </div>
+                {studentsQuery.isLoading ? <p>Učitavanje učenika...</p> : studentsQuery.error ? <p className="text-red-600">{studentsQuery.error.message}</p> : orderedStudents.length === 0 ? <p className="text-gray-500">Nema učenika za odabrane filtere.</p> : (
+                  <table className="min-w-full border-collapse text-left text-sm">
+                    <thead><tr className="border-b border-gray-200"><th className="px-3 py-2">Ime</th><th className="px-3 py-2">Prezime</th><th className="px-3 py-2">Broj pokretanja</th><th className="px-3 py-2">Ukupno vrijeme</th><th className="px-3 py-2">Uspješnost</th><th className="px-3 py-2" /></tr></thead>
+                    <tbody>{orderedStudents.map((student) => {
+                      const metric = studentMetricsById.get(student.id)
+                      const portfolioUrl = `/admin/analytics/student/${student.id}?group_ids=${encodeURIComponent(appliedFilters.groupIds.join(','))}&activity_ids=${encodeURIComponent(appliedFilters.activityIds.join(','))}&include_unassigned=${appliedFilters.includeUnassigned}`
+                      return <tr key={student.id} className="border-b border-gray-100"><td className="px-3 py-2">{student.first_name}</td><td className="px-3 py-2">{student.last_name}</td><td className="px-3 py-2">{metric?.total_attempt_count ?? '—'}</td><td className="px-3 py-2">{metric ? formatDuration(metric.total_duration_seconds) : '—'}</td><td className="px-3 py-2">{metric ? `${formatMetric(metric.success_rate_percent)}%` : '—'}</td><td className="px-3 py-2"><a className="text-blue-600 hover:underline" href={portfolioUrl} target="_blank" rel="noreferrer">Otvori karticu</a></td></tr>
+                    })}</tbody>
+                  </table>
+                )}
+              </div>
+            </details>
+          </div>
+        )}
+      </div>
+    </main>
+  )
+}

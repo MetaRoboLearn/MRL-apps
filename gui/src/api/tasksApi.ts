@@ -28,9 +28,9 @@ export const getTaskById = async (taskId: string)=>{
 
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error('Task not found')
+      throw new Error('Zadatak nije pronađen.')
     }
-    throw new Error('Failed to fetch task')
+    throw new Error('Zadatak nije moguće učitati.')
   }
 
   return response.json()
@@ -48,7 +48,7 @@ export const createTask = async (data: CreateTaskRequest) => {
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.error || 'Failed to create task')
+    throw new Error(error.error || 'Stvaranje zadatka nije uspjelo.')
   }
 
   return response.json()
@@ -64,7 +64,7 @@ export const updateTask = async ({ id, ...data }: CreateTaskRequest & { id: stri
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to update task');
+    throw new Error(error.error || 'Ažuriranje zadatka nije uspjelo.');
   }
 
   return response.json();
@@ -78,7 +78,7 @@ export const deleteTask = async (taskId: string) => {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to delete task');
+    throw new Error(error.error || 'Brisanje zadatka nije uspjelo.');
   }
 
   return response.json();

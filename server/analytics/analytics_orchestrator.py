@@ -1,0 +1,289 @@
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from analytics.dataset_creator import DatasetFilters, create_dataset
+from repositories.user_badge_repository import UserBadgeRepository
+from validators.llm_feedback_generator import generate_feedback
+from validators.llm_feedback_generator.llm_provider import ProviderError
+from models.badge import Badge
+from models.activity import Activity
+from models.user_started_task import UserStartedTask
+from analytics.visualisation_algorithm import (
+    _as_data_uri,
+    _json_value,
+    _task_label_value,
+    build_student_portfolio_data,
+    generate_duration_boxplot,
+    generate_heatmap,
+    generate_summary_metrics,
+    generate_student_summary_table,
+    generate_task_summary_table,
+)
+from analytics.session_outcomes import SESSION_OUTCOMES
+from utils import utc_now
+
+logger = logging.getLogger(__name__)
+
+def _badge_state_for_user(session, user_id: int) -> dict[int, dict[str, Any]]:
+    """Return read-only badge state keyed by the linked activity task."""
+    repository = UserBadgeRepository(session)
+    state = {}
+    for assignment in repository.list_by_user(user_id):
+        state[assignment.badge.relevant_activity_task_id] = repository.assignment_state_dict(assignment)
+    return state
+
+
+def _badge_definitions_for_tasks(session, activity_task_ids) -> dict[int, dict[str, Any]]:
+    """Return task-linked badge definitions, including unassigned badges."""
+    task_ids = tuple({int(task_id) for task_id in activity_task_ids if task_id is not None})
+    if not task_ids:
+        return {}
+
+    badges = session.query(Badge).filter(Badge.relevant_activity_task_id.in_(task_ids)).all()
+    return {
+        badge.relevant_activity_task_id: {
+            "badge_id": badge.id,
+            "title": badge.title,
+            "description": badge.description,
+            "value": badge.value,
+            "image_url": badge.image_url,
+            "relevant_activity_task_id": badge.relevant_activity_task_id,
+        }
+        for badge in badges
+    }
+
+def _build_reduced_task_status(task_status: str, activity_available: bool) -> str:
+    """Map analytics outcomes to student-facing status values."""
+    if task_status in (SESSION_OUTCOMES["SUCCESS_BOTH"], SESSION_OUTCOMES["SUCCESS_ROBOT"], SESSION_OUTCOMES["SUCCESS_SIM"]):
+        return "Success"
+    elif task_status == SESSION_OUTCOMES["ABANDONED"]:
+        return "in_progress" if activity_available else "Fail"
+    elif task_status == SESSION_OUTCOMES["FAIL"]:
+        return "Fail"
+    return "Fail"  # return by default
+
+
+def _student_task_analysis(task_analysis: Any) -> dict[str, Any] | None:
+    """Return configured findings without teacher-only ordering weights or score."""
+    if not isinstance(task_analysis, dict):
+        return None
+    return {
+        "syntax_valid": task_analysis.get("syntax_valid"),
+        "detection_method": task_analysis.get("detection_method"),
+        "syntax_error": task_analysis.get("syntax_error"),
+        "expected_elements": [
+            {
+                "element_id": element.get("element_id"),
+                "name": element.get("name"),
+                "count": element.get("count", 0),
+                "status": element.get("status"),
+                "evidence": element.get("evidence", []),
+            }
+            for element in task_analysis.get("expected_elements", [])
+        ],
+    }
+
+
+def generate_group_analytics(session, filters: DatasetFilters) -> dict[str, Any]:
+    """Generate metrics and plots for all selected groups as one cohort."""
+    logger.info(
+        "Generating group analytics for groups=%s activities=%s",
+        filters.group_ids,
+        filters.activity_ids,
+    )
+    processed, summaries = create_dataset(session, filters)
+    logger.info(
+        "Group analytics dataset ready: processed_rows=%d summary_rows=%d",
+        len(processed),
+        len(summaries),
+    )
+    return {
+        "summary_table": generate_summary_metrics(summaries),
+        "student_summary_table": generate_student_summary_table(summaries),
+        "task_summary_table": generate_task_summary_table(processed, summaries),
+        "heatmap_png": _as_data_uri(generate_heatmap(processed)),
+        "boxplot_png": _as_data_uri(generate_duration_boxplot(processed)),
+        "student_ids": sorted(processed["user_id"].dropna().unique().tolist())
+        if not processed.empty
+        else [],
+    }
+
+
+def generate_student_portfolio(session, student_id: int, filters: DatasetFilters) -> dict[str, Any]:
+    """Generate one teacher/admin student portfolio from authorized dataset rows."""
+    logger.info(
+        "Generating student portfolio for student_id=%s groups=%s activities=%s",
+        student_id,
+        filters.group_ids,
+        filters.activity_ids,
+    )
+    scoped_filters = DatasetFilters(
+        activity_ids=filters.activity_ids,
+        activity_task_ids=filters.activity_task_ids,
+        task_ids=filters.task_ids,
+        user_ids=(student_id,),
+        group_ids=filters.group_ids,
+        date_filter=filters.date_filter,
+        ignore_activity_task_ids=filters.ignore_activity_task_ids,
+        ignore_task_ids=filters.ignore_task_ids,
+        excluded_usernames=filters.excluded_usernames,
+        excluded_task_previews=filters.excluded_task_previews,
+        include_unassigned=filters.include_unassigned,
+    )
+    processed, summaries = create_dataset(session, scoped_filters)
+    badge_definitions = _badge_definitions_for_tasks(session, summaries.get("activity_task_id", []))
+    portfolio = build_student_portfolio_data(
+        processed,
+        summaries,
+        student_id,
+        badge_state=_badge_state_for_user(session, student_id),
+        badge_definitions=badge_definitions,
+    )
+    logger.info("Student portfolio generated: student_id=%s task_cards=%d", student_id, len(portfolio["task_cards"]))
+    return portfolio
+
+
+def build_reduced_submissions(
+    summaries,
+    badge_state: dict[int, dict[str, Any]],
+    activity_availability: dict[int, bool],
+) -> list[dict[str, Any]]:
+    """Build the student-facing reduced submission view (no teacher-only fields)."""
+    if summaries.empty:
+        return []
+    submissions = []
+    for _, summary in summaries.sort_values("first_attempt_at").iterrows():
+        task_id = int(summary["activity_task_id"])
+        submissions.append({
+            "activity_task_id": task_id,
+            "task_id": _json_value(summary["task_id"]),
+            "activity_title": _json_value(summary["activity_title"]),
+            "task_name": _task_label_value(summary),
+            "status": _build_reduced_task_status(
+                _json_value(summary["status"]),
+                activity_availability.get(int(summary["activity_id"]), False),
+            ),
+            "attempt_date": _json_value(summary["first_attempt_at"]),
+            "attempt_count": _json_value(summary["attempt_count"]),
+            "duration_seconds": _json_value(summary["duration_seconds"]),
+            "final_code": _json_value(summary["final_code"]),
+            "task_analysis": _student_task_analysis(summary.get("task_analysis")),
+            "badge": badge_state.get(task_id),
+        })
+    return submissions
+
+
+def generate_reduced_submissions(session, student_id: int) -> list[dict[str, Any]]:
+    """Generate the authenticated student's own reduced submission view."""
+    logger.info("Generating reduced submissions for student_id=%s", student_id)
+    filters = DatasetFilters(user_ids=(student_id,))
+    _, summaries = create_dataset(session, filters)
+    activity_ids = {
+        int(activity_id)
+        for activity_id in summaries["activity_id"].dropna().unique()
+    } if not summaries.empty else set()
+    activities = session.query(Activity.id, Activity.active, Activity.time_to).filter(
+        Activity.id.in_(activity_ids)
+    ).all() if activity_ids else []
+    now = utc_now()
+    activity_availability = {
+        activity_id: bool(is_active) and (time_to is None or time_to >= now)
+        for activity_id, is_active, time_to in activities
+    }
+    submissions = build_reduced_submissions(
+        summaries,
+        badge_state=_badge_state_for_user(session, student_id),
+        activity_availability=activity_availability,
+    )
+    logger.info("Reduced submissions generated: student_id=%s count=%d", student_id, len(submissions))
+    return submissions
+
+
+def generate_llm_feedback(session, user_started_task_id: int) -> dict[str, Any]:
+    """Generate feedback from an authorized task summary; never persist the draft."""
+    started_task = session.query(UserStartedTask).filter(
+        UserStartedTask.id == user_started_task_id
+    ).first()
+    if (
+        not started_task
+        or not started_task.started_by
+        or not started_task.starter
+        or not started_task.starter.role
+        or started_task.starter.role.name != "student"
+    ):
+        logger.warning("LLM feedback task not found: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Selected submission not found", "status_code": 404}
+
+    filters = DatasetFilters(
+        user_ids=(started_task.started_by,),
+        activity_task_ids=(started_task.activity_task_id,),
+    )
+    _, summaries = create_dataset(session, filters)
+    if summaries.empty or "user_started_task_id" not in summaries:
+        logger.warning("LLM feedback task is inaccessible or has no submission: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Selected submission not found", "status_code": 404}
+
+    selected_summary = summaries[
+        summaries["user_started_task_id"] == user_started_task_id
+    ]
+    if selected_summary.empty:
+        logger.warning("LLM feedback task is inaccessible: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Selected submission not found", "status_code": 404}
+
+    summary = selected_summary.iloc[0]
+    code = summary.get("final_code")
+    if not isinstance(code, str) or not code.strip():
+        logger.warning("LLM feedback task has no code: user_started_task_id=%s", user_started_task_id)
+        return {"error": "Submitted code is unavailable", "status_code": 400}
+
+    task_analysis = summary.get("task_analysis")
+    if not isinstance(task_analysis, dict):
+        task_analysis = None
+    code_standard_analysis = summary.get("code_standard_analysis")
+    if not isinstance(code_standard_analysis, dict):
+        code_standard_analysis = None
+    task_title = summary.get("task_title")
+    if not isinstance(task_title, str):
+        task_title = None
+    task_preview = summary.get("task_preview")
+    if not isinstance(task_preview, str):
+        task_preview = None
+
+    logger.info(
+        "Starting LLM feedback generation: user_started_task_id=%s task_analysis_supplied=%s",
+        user_started_task_id,
+        task_analysis is not None,
+    )
+    try:
+        result = generate_feedback(
+            code,
+            task_analysis,
+            code_standard_analysis,
+            task_title=task_title,
+            task_preview=task_preview,
+        )
+    except ProviderError as error:
+        logger.exception("LLM feedback provider is unavailable")
+        return {
+            "error": "Feedback provider is unavailable",
+            "error_code": error.kind,
+            "status_code": 502,
+        }
+    except Exception:
+        logger.exception("LLM feedback generation failed")
+        return {
+            "error": "Generiranje povratne informacije nije uspjelo.",
+            "error_code": "provider",
+            "status_code": 502,
+        }
+
+    if result["used_fallback"]:
+        logger.warning(
+            "LLM feedback used deterministic fallback: user_started_task_id=%s sections=%s",
+            user_started_task_id,
+            result["fallback_sections"],
+        )
+    logger.info("LLM feedback generation completed: user_started_task_id=%s", user_started_task_id)
+    return result

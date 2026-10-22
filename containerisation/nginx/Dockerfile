@@ -18,16 +18,13 @@ RUN npm run build
 # ── Stage 2: nginx serving static files + reverse-proxy ─────────────────────
 FROM nginx:alpine
 
-# openssl is needed to auto-generate a self-signed certificate on first start
-RUN apk add --no-cache openssl
-
 # Copy compiled frontend assets
 COPY --from=frontend-build /frontend/dist /usr/share/nginx/html
 
 # nginx configuration
 COPY containerisation/nginx/nginx.conf /etc/nginx/nginx.conf
 
-# Entrypoint: generates the SSL cert when missing, then starts nginx
+# Entrypoint: verifies the host-provided SSL certificate, then starts nginx
 COPY containerisation/nginx/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

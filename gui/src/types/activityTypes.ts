@@ -1,5 +1,12 @@
 import {UserBasic} from "./userTypes.ts";
 
+export type ProgrammingElementOption = {
+  id: string;
+  name: string;
+  description: string | null;
+  element_type_id: string;
+}
+
 export interface ActivityTask {
   activity_task_id: number;
   task_id: number;
@@ -42,6 +49,30 @@ export type Activity = {
   creator: UserBasic;
 }
 
+export type OwnedActivityTaskOption = {
+  activity_task_id: number
+  task_id: number
+  task_title: string | null
+  preview: string | null
+  difficulty: number | null
+  order: number | null
+  task_type: string | null
+}
+
+export type OwnedActivityOption = {
+  id: number
+  title: string
+  description: string | null
+  time_from: string | null
+  time_to: string | null
+  active: boolean | null
+  created_at: string
+  updated_at: string | null
+  created_by: number | null
+  updated_by: number | null
+  activity_tasks: OwnedActivityTaskOption[]
+}
+
 export type CreateActivityRequest = {
   title: string;
   description?: string;
@@ -65,7 +96,7 @@ type AvailableActivityTask = {
   task_type: TaskType;
   started: boolean;
   user_started_task_id: number | null;
-  is_finished: true | null
+  is_finished: boolean
   difficulty: number | null;
 }
 

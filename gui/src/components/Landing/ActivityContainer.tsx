@@ -20,12 +20,12 @@ const ActivityContainer = () => {
   });
 
   if (isLoading || !activities) {
-    return <div>Loading...</div>;
+    return <div className="readable-content" role="status" aria-live="polite">Učitavanje aktivnosti...</div>;
   }
 
   if (activities.length === 0) {
     return (
-      <div className="bg-white p-10 border-3 border-white-smoke-500 rounded-md text-center">
+      <div className="readable-content rounded-md border-3 border-white-smoke-500 bg-white p-10 text-center">
         <div className="text-5xl mb-4">🎒</div>
         <h2 className="text-2xl font-bold text-dark-neutrals-400">Trenutno nema aktivnosti</h2>
         <p className="mt-2 text-dark-neutrals-300">Vrati se kasnije, tvoji učitelji će uskoro pripremiti nešto za tebe!</p>
@@ -34,7 +34,7 @@ const ActivityContainer = () => {
   }
 
   return (
-    <div className="space-y-10 bg-white p-6 border-3 border-white-smoke-500 rounded-md">
+    <div className="readable-content space-y-10 rounded-md border-3 border-white-smoke-500 bg-white p-6">
       {activities.map((a, i_a) => (
         <div className={'space-y-2'} key={i_a}>
           <div key={a.id} className="bg-sunglow-300 border-3 border-sunglow-600 px-10 py-6 rounded-md text-dark-neutrals-500 flex items-center justify-between">

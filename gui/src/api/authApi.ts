@@ -7,8 +7,8 @@ export const login = async (data: { username: string; password: string }) => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Login failed');
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Prijava nije uspjela.');
   }
 
   return response.json();
@@ -21,8 +21,8 @@ export const logout = async () => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Logout failed');
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Odjava nije uspjela.');
   }
 
   return response.json();
@@ -34,8 +34,8 @@ export const getMe = async () => {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch user');
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Podatke o korisniku nije moguće učitati.');
   }
 
   return response.json();

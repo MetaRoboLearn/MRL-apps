@@ -1,0 +1,7 @@
+.env*
+venv/
+.venv/
+__pycache__/
+load_test_runs/
+tests/
+.git/

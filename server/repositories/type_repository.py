@@ -6,3 +6,6 @@ class TypeRepository:
 
     def list_all(self):
         return self.session.query(Type).all()
+
+    def get_by_id(self, type_id: int):
+        return self.session.query(Type).filter(Type.id == type_id).first()

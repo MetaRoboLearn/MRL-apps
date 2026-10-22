@@ -2,6 +2,7 @@ import {useState, useEffect, FormEvent, ChangeEvent} from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {CreateUserRequest, Role, UpdateUserRequest, User} from "../../types/userTypes.ts";
 import {capitalizeFirstLetter} from "../../utils.ts";
+import {GroupSummary} from "../../types/groupTypes.ts";
 
 type UserFormData = {
   username: string
@@ -9,11 +10,13 @@ type UserFormData = {
   first_name: string
   last_name: string
   role_id: number
+  initial_group_id: number | 'unassigned' | ''
 }
 
 type UserFormPropsCreate = {
   user?: never
   roles: Role[]
+  groups: GroupSummary[]
   onSubmit: (data: CreateUserRequest) => Promise<void>
   isLoading: boolean
   error?: string
@@ -22,6 +25,7 @@ type UserFormPropsCreate = {
 type UserFormPropsEdit = {
   user: User
   roles: Role[]
+  groups?: GroupSummary[]
   onSubmit: (data: UpdateUserRequest) => Promise<void>
   isLoading: boolean
   error?: string
@@ -29,7 +33,13 @@ type UserFormPropsEdit = {
 
 type UserFormProps = UserFormPropsCreate | UserFormPropsEdit
 
-export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormProps) {
+const roleLabel = (role: string) => ({
+  admin: 'Administrator',
+  teacher: 'Nastavnik',
+  student: 'Učenik',
+}[role.toLowerCase()] || capitalizeFirstLetter(role))
+
+export function UserForm({ user, roles, groups = [], onSubmit, isLoading, error }: UserFormProps) {
   const navigate = useNavigate()
   const isEditing = !!user
 
@@ -39,6 +49,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
     role_id: user?.role_id || roles[roles.length - 1]?.id || 1,
+    initial_group_id: 'unassigned',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -51,29 +62,33 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         first_name: user.first_name,
         last_name: user.last_name,
         role_id: user.role_id,
+        initial_group_id: 'unassigned',
       })
     }
   }, [user])
+
+  const selectedRole = roles.find((role) => role.id === Number(formData.role_id))
+  const isStudentRole = selectedRole?.name.toLowerCase() === 'student'
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required'
+      newErrors.username = 'Korisničko ime je obavezno.'
     }
 
     // Password is required for create, optional for edit
     if (!isEditing && !formData.password.trim()) {
-      newErrors.password = 'Password is required'
+      newErrors.password = 'Lozinka je obavezna.'
     } else if (formData.password && formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
+      newErrors.password = 'Lozinka mora sadržavati najmanje 8 znakova.'
     }
 
     if (!formData.first_name.trim()) {
-      newErrors.first_name = 'First name is required'
+      newErrors.first_name = 'Ime je obavezno.'
     }
     if (!formData.last_name.trim()) {
-      newErrors.last_name = 'Last name is required'
+      newErrors.last_name = 'Prezime je obavezno.'
     }
 
     setErrors(newErrors)
@@ -111,6 +126,9 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         first_name: formData.first_name,
         last_name: formData.last_name,
         role_id: formData.role_id,
+        ...(isStudentRole && typeof formData.initial_group_id === 'number'
+          ? { initial_group_id: formData.initial_group_id }
+          : {}),
       }
 
       await (onSubmit as (data: CreateUserRequest) => Promise<void>)(submitData)
@@ -121,7 +139,18 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const nextRoleName = roles.find((role) => role.id === Number(value))?.name.toLowerCase()
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'role_id'
+        ? Number(value)
+        : name === 'initial_group_id'
+          ? value === 'unassigned' ? 'unassigned' : value ? Number(value) : ''
+          : value,
+      ...(name === 'role_id'
+        ? { initial_group_id: nextRoleName === 'student' ? prev.initial_group_id || 'unassigned' : '' }
+        : {}),
+    }))
     // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors((prev) => {
@@ -133,9 +162,9 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6">
+    <form onSubmit={handleSubmit} className="readable-content rounded-lg border border-gray-200 bg-white p-6">
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-300 bg-red-100 p-3 text-red-700" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -144,7 +173,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         {/* Username */}
         <div>
           <label htmlFor="username" className="block text-sm font-medium mb-1">
-            Username *
+            Korisničko ime *
           </label>
           <input
             type="text"
@@ -165,7 +194,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         {/* Password */}
         <div>
           <label htmlFor="password" className="block text-sm font-medium mb-1">
-            Password {isEditing ? '(leave blank to keep current)' : '*'}
+            Lozinka {isEditing ? '(ostavite prazno za zadržavanje postojeće)' : '*'}
           </label>
           <input
             type="password"
@@ -186,7 +215,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         {/* First Name */}
         <div>
           <label htmlFor="first_name" className="block text-sm font-medium mb-1">
-            First Name *
+            Ime *
           </label>
           <input
             type="text"
@@ -207,7 +236,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         {/* Last Name */}
         <div>
           <label htmlFor="last_name" className="block text-sm font-medium mb-1">
-            Last Name *
+            Prezime *
           </label>
           <input
             type="text"
@@ -228,7 +257,7 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
         {/* Role ID */}
         <div>
           <label htmlFor="role_id" className="block text-sm font-medium mb-1">
-            Role *
+            Uloga *
           </label>
           <select
             id="role_id"
@@ -238,10 +267,37 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
             className="w-full px-3 py-2 border border-gray-300 rounded-md"
           >
             {roles.map((r) => (
-              <option key={r.id} value={r.id}>{capitalizeFirstLetter(r.name)}</option>
+              <option key={r.id} value={r.id}>{roleLabel(r.name)}</option>
             ))}
           </select>
         </div>
+
+        {!isEditing && isStudentRole && (
+          <div>
+            <label htmlFor="initial_group_id" className="block text-sm font-medium mb-1">
+              Početna grupa
+            </label>
+            <select
+              id="initial_group_id"
+              name="initial_group_id"
+              value={formData.initial_group_id}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border rounded-md ${
+                errors.initial_group_id ? 'border-red-500' : 'border-gray-300'
+              }`}
+            >
+              <option value="unassigned">Neraspoređeno</option>
+              {groups.map((group) => (
+                <option key={group.group_id} value={group.group_id}>
+                  {group.group_name}
+                </option>
+              ))}
+            </select>
+            {errors.initial_group_id && (
+              <p className="mt-1 text-sm text-red-600">{errors.initial_group_id}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Buttons */}
@@ -251,14 +307,14 @@ export function UserForm({ user, roles, onSubmit, isLoading, error }: UserFormPr
           disabled={isLoading}
           className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Saving...' : isEditing ? 'Update User' : 'Create User'}
+          {isLoading ? 'Spremanje...' : isEditing ? 'Ažuriraj korisnika' : 'Stvori korisnika'}
         </button>
         <button
           type="button"
           onClick={() => navigate({ to: '/admin/users' })}
           className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium"
         >
-          Cancel
+          Odustani
         </button>
       </div>
     </form>

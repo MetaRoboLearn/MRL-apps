@@ -4,7 +4,6 @@ from flask_login import current_user, login_required
 from auth import role_required
 from database import db_session
 from models import UserStartedTask
-from models.user_activity_task import UserActivityTask
 from repositories.activity_repository import ActivityRepository
 from repositories.activity_task_repository import ActivityTaskRepository
 from utils import parse_boolean_param, parse_datetime, _to_utc_iso
@@ -39,7 +38,7 @@ def get_activity(activity_id: int):
         repo = ActivityRepository(session)
         activity = repo.get_with_details(activity_id)
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
 
         return jsonify({
             **_activity_to_dict(activity),
@@ -134,6 +133,37 @@ def list_activities_with_tasks():
             for a in activities
         ]), 200
 
+
+# ---------- TEACHER-OWNED OPTIONS ----------
+@bp.route("/owned-overview", methods=["GET"])
+@role_required('admin', 'teacher')
+def list_owned_activities_with_tasks():
+    """Return role-scoped activity options used by analytics and badge forms."""
+    with db_session() as session:
+        activities = ActivityRepository(session).list_owned_activities_with_tasks(
+            user_id=current_user.id,
+            is_admin=current_user.role.name == 'admin',
+            active_only=True,
+        )
+        return jsonify([
+            {
+                **_activity_to_dict(activity),
+                "activity_tasks": [
+                    {
+                        "activity_task_id": task.id,
+                        "task_id": task.task_id,
+                        "task_title": task.task.title if task.task else None,
+                        "preview": task.preview,
+                        "difficulty": task.difficulty,
+                        "order": task.order,
+                        "task_type": task.type.name if task.type else None,
+                    }
+                    for task in sorted(activity.activity_tasks, key=lambda item: item.order or 0)
+                ],
+            }
+            for activity in activities
+        ]), 200
+
 # ---------- READ ALL ACTIVITIES AVAILABLE TO STUDENTS ----------
 @bp.route("/available", methods=["GET"])
 def list_student_available_activities():
@@ -141,7 +171,7 @@ def list_student_available_activities():
 
     with db_session() as session:
         repo = ActivityRepository(session)
-        activities = repo.list_student_available_activities()
+        activities = repo.list_student_available_activities(user_id)
 
         # Get all user started tasks for this user in one query
         started = {
@@ -151,51 +181,33 @@ def list_student_available_activities():
             .all()
         }
 
-        # Get all activity task IDs this student is linked to
-        assigned_task_ids = set(
-            row[0]
-            for row in session.query(UserActivityTask.activity_task_id)
-            .filter(UserActivityTask.user_id == user_id)
-            .all()
-        )
-
-        def is_task_visible(at):
-            if at.student_mode == 'all':
-                return True
-            if at.student_mode == 'include':
-                return at.id in assigned_task_ids
-            if at.student_mode == 'exclude':
-                return at.id not in assigned_task_ids
-            return True
-
         result = [
             {
-                "id": a.id,
-                "title": a.title,
-                "description": a.description,
-                "time_from": _to_utc_iso(a.time_from),
-                "time_to": _to_utc_iso(a.time_to),
+                "id": activity.id,
+                "title": activity.title,
+                "description": activity.description,
+                "time_from": _to_utc_iso(activity.time_from),
+                "time_to": _to_utc_iso(activity.time_to),
                 "activity_tasks": [
                     {
-                        "activity_task_id": at.id,
-                        "task_id": at.task_id,
-                        "task_title": at.task.title if at.task else None,
-                        "task_description": at.task.description if at.task else None,
-                        "preview": at.preview,
-                        "order": at.order,
-                        "task_type": at.type.name if at.type else None,
-                        "is_logged": at.is_logged,
-                        "allows_robot": at.allows_robot,
-                        "started": at.id in started,
-                        "user_started_task_id": started[at.id].id if at.id in started else None,
-                        "is_finished": started[at.id].is_finished if at.id in started else False,
-                        "difficulty": at.difficulty,
+                        "activity_task_id": activity_task.id,
+                        "task_id": activity_task.task_id,
+                        "task_title": activity_task.task.title if activity_task.task else None,
+                        "task_description": activity_task.task.description if activity_task.task else None,
+                        "preview": activity_task.preview,
+                        "order": activity_task.order,
+                        "task_type": activity_task.type.name if activity_task.type else None,
+                        "is_logged": activity_task.is_logged,
+                        "allows_robot": activity_task.allows_robot,
+                        "started": activity_task.id in started,
+                        "user_started_task_id": started[activity_task.id].id if activity_task.id in started else None,
+                        "is_finished": started[activity_task.id].is_finished if activity_task.id in started else False,
+                        "difficulty": activity_task.difficulty,
                     }
-                    for at in sorted(a.activity_tasks, key=lambda at: at.order)
-                    if is_task_visible(at)
+                    for activity_task in available_tasks
                 ],
             }
-            for a in activities
+            for activity, available_tasks in activities
         ]
 
         return jsonify([a for a in result if a["activity_tasks"]]), 200
@@ -208,7 +220,7 @@ def create_activity():
     required = ("title", "time_from", "time_to")
     missing = [k for k in required if k not in data]
     if missing:
-        return jsonify({"error": "Missing fields", "missing": missing}), 400
+        return jsonify({"error": "Nedostaju obavezna polja.", "missing": missing}), 400
 
     try:
         time_from = parse_datetime(data["time_from"])
@@ -238,7 +250,7 @@ def update_activity(activity_id: int):
     allowed = {"title", "description", "time_from", "time_to", "active"}
     unknown = [k for k in data.keys() if k not in allowed]
     if unknown:
-        return jsonify({"error": "Unknown fields", "unknown": unknown}), 400
+        return jsonify({"error": "Nepoznata polja.", "unknown": unknown}), 400
 
     # parse datetimes if provided
     try:
@@ -259,7 +271,7 @@ def update_activity(activity_id: int):
             actor_user_id=current_user.id,
         )
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
 
         return jsonify(_activity_to_dict(activity)), 200
 
@@ -272,7 +284,7 @@ def deactivate_activity(activity_id: int):
         repo = ActivityRepository(session)
         activity = repo.deactivate(activity_id, actor_user_id=current_user.id)
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
         return jsonify(_activity_to_dict(activity)), 200
 
 
@@ -284,7 +296,7 @@ def activate_activity(activity_id: int):
         repo = ActivityRepository(session)
         activity = repo.activate(activity_id, actor_user_id=current_user.id)
         if not activity:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
         return jsonify(_activity_to_dict(activity)), 200
 
 
@@ -296,10 +308,10 @@ def delete_activity(activity_id: int):
         at_repo = ActivityTaskRepository(session)
         tasks = at_repo.list_by_activity_id(activity_id=activity_id)
         if tasks:
-            return jsonify({"error": "Cannot delete activity with assigned tasks. Remove all tasks first."}), 400
+            return jsonify({"error": "Aktivnost s dodijeljenim zadacima nije moguće obrisati. Najprije uklonite sve zadatke."}), 400
 
         repo = ActivityRepository(session)
         ok = repo.delete(activity_id)
         if not ok:
-            return jsonify({"error": "Activity not found"}), 404
+            return jsonify({"error": "Aktivnost nije pronađena."}), 404
         return jsonify({"deleted": True}), 200
