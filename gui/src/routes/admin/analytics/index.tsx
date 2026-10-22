@@ -161,9 +161,9 @@ function RouteComponent() {
                       <th className="px-3 py-2">Razina strukture</th>
                       <th className="px-3 py-2">Uspješnost</th>
                       <th className="px-3 py-2">Prosj. trajanje</th>
-                      <th className="px-3 py-2">Medijan trajanja</th>
-                      <th className="px-3 py-2">Prosj. neuspjeha</th>
-                      <th className="px-3 py-2">Prosj. izmjena do uspjeha</th>
+                     {/* <th className="px-3 py-2">Medijan trajanja</th> */}
+                      {/* <th className="px-3 py-2">Prosj. neuspjeha</th> */}
+                      {/* <th className="px-3 py-2">Prosj. izmjena do uspjeha</th> */}
                       <th className="px-3 py-2">Prosjek broja linija</th>
                       <th className="px-3 py-2">Najmanji broj linija</th>
                       <th className="px-3 py-2">Najveći broj linija</th>
@@ -178,9 +178,9 @@ function RouteComponent() {
                         <td className="px-3 py-2">{formatDifficulty(task.task_difficulty)}</td>
                         <td className="px-3 py-2">{formatMetric(task.success_rate)}%</td>
                         <td className="px-3 py-2">{task.average_duration_seconds === null ? '—' : formatDuration(task.average_duration_seconds)}</td>
-                        <td className="px-3 py-2">{task.median_duration_seconds === null ? '—' : formatDuration(task.median_duration_seconds)}</td>
-                        <td className="px-3 py-2">{formatMetric(task.average_failures)}</td>
-                        <td className="px-3 py-2">{formatMetric(task.average_edits_to_success)}</td>
+                        {/* <td className="px-3 py-2">{task.median_duration_seconds === null ? '—' : formatDuration(task.median_duration_seconds)}</td> */}
+                        {/* <td className="px-3 py-2">{formatMetric(task.average_failures)}</td> */}
+                        {/* <td className="px-3 py-2">{formatMetric(task.average_edits_to_success)}</td> */}
                         <td className="px-3 py-2">{formatMetric(task.average_final_solution_complexity)}</td>
                         <td className="px-3 py-2">{formatMetric(task.min_task_complexity)}</td>
                         <td className="px-3 py-2">{formatMetric(task.max_task_complexity)}</td>
