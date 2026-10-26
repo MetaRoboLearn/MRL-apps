@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -22,7 +23,6 @@ _SENTENCE_END = re.compile(r"[.!?](?=\s|$)")
 _WORD = re.compile(r"\w+")
 _ANSWER_STYLES = frozenset({"default", "shortened"})
 _SHORTENED_SOURCES = frozenset({"task_analysis", "all_not_detected"})
-_SHORT_CODE_MAX_LINES = 5
 _SHORTENED_PRAISE_HEADING = "Ovo si dobro napravio:"
 _SHORTENED_SUGGESTION_HEADING = "Ovo bi mogao bolje provjeriti:"
 _SHORTENED_CONNECTORS = frozenset({
@@ -78,22 +78,27 @@ def _resolve_answer_style(value: str | None) -> str:
     return normalized if normalized in _ANSWER_STYLES else "default"
 
 
-def _non_empty_line_count(code: str) -> int:
-    return sum(1 for line in code.splitlines() if line.strip())
-
-
-def _opening_category(feedback_plan: dict[str, Any], code: str) -> str:
-    if feedback_plan.get("source") == "all_not_detected":
-        if _non_empty_line_count(code) <= _SHORT_CODE_MAX_LINES:
-            return "short_not_detected"
-        return "incomplete"
-    if (
-        feedback_plan.get("completion_statement")
-        and feedback_plan.get("main_recommendation") is None
-        and feedback_plan.get("additional_recommendation") is None
-    ):
+def _opening_category(
+    feedback_plan: dict[str, Any],
+    task_analysis: dict[str, Any] | None,
+) -> str:
+    if feedback_plan.get("completion_statement"):
         return "all_detected"
-    return "incomplete"
+
+    completion = task_analysis.get("weighted_completion") if isinstance(task_analysis, dict) else None
+    if (
+        not isinstance(completion, (int, float))
+        or isinstance(completion, bool)
+        or not math.isfinite(completion)
+    ):
+        return "coverage_unavailable"
+
+    completion_percent = int(min(1.0, max(0.0, completion)) * 100 + 0.5)
+    if completion_percent < 40:
+        return "low_coverage"
+    if completion_percent < 80:
+        return "moderate_coverage"
+    return "high_coverage"
 
 
 def _only_connectors_added(original: str, candidate: str) -> bool:
@@ -223,7 +228,7 @@ def generate_feedback(
     if shortened:
         generation_requests.insert(
             0,
-            build_introduction_request(_opening_category(feedback_plan, code)),
+            build_introduction_request(_opening_category(feedback_plan, task_analysis)),
         )
     active_provider = provider
     if generation_requests and active_provider is None:

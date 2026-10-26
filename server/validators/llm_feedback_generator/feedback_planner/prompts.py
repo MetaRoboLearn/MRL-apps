@@ -74,9 +74,12 @@ _BEAUTIFY_INSTRUCTIONS = (
 
 _INTRODUCTION_INSTRUCTIONS = (
     "Napiši jednu kratku, toplu uzvičnu rečenicu kao uvod povratne informacije. Polje "
-    "opening_category određuje ton i značenje: all_detected znači da je rješenje potpuno i da nema "
-    "preporuka za doradu; incomplete znači da učenik ide dobrim putem, ali treba još "
-    "rada; short_not_detected znači da je kod vrlo kratak i učenik još ne zna kako krenuti. "
+    "opening_category određuje ton i značenje: all_detected znači da su svi očekivani programski "
+    "elementi korišteni u kodu, ali ne tvrdi da je rješenje bez grešaka; high_coverage znači da je "
+    "pokrivenost očekivanih elemenata visoka (80% ili više), moderate_coverage znači da je "
+    "pokrivenost srednja (40% do manje od 80%), a low_coverage znači da je pokrivenost niska "
+    "(manje od 40%); coverage_unavailable znači da se pokrivenost ne može pouzdano odrediti, "
+    "pa koristi neutralan poticajan ton bez tvrdnje o napretku. "
     "Ne moraš koristiti točne izraze, ali značenje i ton moraju odgovarati kategoriji. "
     "Ne opisuj provjeru koda, nego govori o dojmu o rješenju. "
     "Završi uskličnikom (!) i ne dodaj ništa nakon njega."
@@ -108,8 +111,9 @@ _CONCISE_INSTRUCTIONS = (
 
 _INTRODUCTION_FALLBACKS = {
     "all_detected": "Bravo!",
-    "incomplete": "Vidim da se trudiš!",
-    "short_not_detected": "Vidim da ne znaš kako krenuti!",
+    "high_coverage": "Odlično napreduješ!",
+    "moderate_coverage": "Vidim da se trudiš!",
+    "low_coverage": "Krenimo korak po korak.",
 }
 
 _SECTION_INSTRUCTIONS: dict[GenerationKind, str] = {
