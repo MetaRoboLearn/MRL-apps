@@ -81,4 +81,4 @@ When a configured task has only `not_detected` expected elements, the feedback
 response uses, in `default` style, one hardcoded encouragement message containing a generic question.
 This intentional path does not call the LLM and does not set `used_fallback`.
 
-Provider mode and credentials are configured only on the backend with `LLM_FEEDBACK_PROVIDER`, `LLM_FEEDBACK_LOCAL_API_BASE`, `LLM_FEEDBACK_LOCAL_MODEL`, `LLM_FEEDBACK_GEMINI_API_KEY`, and `LLM_FEEDBACK_GEMINI_MODEL`. `FEEDBACK_GENERATOR_ANSWER_STYLE` selects the `default` or `shortened` answer layout. Gemini requests use the official `google-genai` Python SDK, which selects the API endpoint.
+Provider mode and credentials are configured only on the backend with `LLM_FEEDBACK_PROVIDER`, `LLM_FEEDBACK_LOCAL_API_BASE`, `LLM_FEEDBACK_LOCAL_MODEL`, `LLM_FEEDBACK_GEMINI_API_KEY`, and `LLM_FEEDBACK_GEMINI_MODEL`. `FEEDBACK_GENERATOR_ANSWER_STYLE` selects the `default` or `shortened` answer mode; missing or invalid values use `default`. Gemini requests use the official `google-genai` Python SDK, which selects the API endpoint.

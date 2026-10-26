@@ -109,8 +109,6 @@ def _reflection_question(target: dict[str, Any], reflection_goal: str) -> dict[s
 def build_feedback_plan(
     task_analysis: dict[str, Any] | None,
     code_standard_analysis: dict[str, Any] | None = None,
-    *,
-    include_all_not_detected_guidance: bool = False,
 ) -> dict[str, Any]:
     """Select evidence-backed feedback sections without generating their wording."""
     analysis = task_analysis if isinstance(task_analysis, dict) else {}
@@ -128,9 +126,7 @@ def build_feedback_plan(
         }
 
     if all(element.get("status") == "not_detected" for element in expected_elements):
-        guidance = None
-        if include_all_not_detected_guidance:
-            guidance = _syntax_recommendation(analysis, expected_elements) or _plan_item(expected_elements[0])
+        guidance = _syntax_recommendation(analysis, expected_elements) or _plan_item(expected_elements[0])
         return {
             "source": "all_not_detected",
             "syntax_valid": analysis.get("syntax_valid"),

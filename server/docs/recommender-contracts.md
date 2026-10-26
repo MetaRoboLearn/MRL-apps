@@ -246,11 +246,16 @@ syntax issue.
 
 ## LLM generation and provider contract
 
-The generator builds one `GenerationRequest` per selected section. Its `kind` is
-one of `praise`, `main_recommendation`, `additional_recommendation`,
-`reflection_question`, or `compatibility_comment`; each request contains a
-`system_prompt` and a `user_prompt`. Requests for sections that are not in the
-plan are not sent. This means that every plan element is one model request. For reference, that means if the plan has `praises`, `main_recommendation` and `reflection_question` defined, then the LLM would receive 3 separate requests for each element of the plan.
+The selected prompt mode builds one `GenerationRequest` per selected section.
+Its `kind` is one of `praise`, `main_recommendation`,
+`additional_recommendation`, `reflection_question`, `compatibility_comment`,
+`introduction`, `beautify`, or `beautify_variant_2`; each request carries
+structured context as well as a `system_prompt` and a serialized `user_prompt`.
+Fallback generation reads the structured context directly. Requests for
+sections that are not in the plan are not sent. This means that every selected
+plan section is one model request. For reference, if the plan has `praises`,
+`main_recommendation`, and `reflection_question`, the LLM receives 3 separate
+requests for those sections.
 
 The provider receives only those prompts through this provider-neutral
 interface:
@@ -258,6 +263,16 @@ interface:
 ```python
 generate_text(system_prompt: str, user_prompt: str) -> str
 ```
+
+`prompts_orchestrator.py` resolves `FEEDBACK_GENERATOR_ANSWER_STYLE` once and
+delegates to the default or shortened prompt strategy. Both strategies consume
+the same mode-independent feedback plan and own their prompt wording,
+deterministic fallbacks, mode-specific validation, and final answer structure.
+Shared output safeguards reject empty responses, section responses over 600
+characters, multiline section responses, and numeric-grade text for every
+mode. The default final prose pass is also required to be one paragraph; the
+shortened final pass may retain structured lines but must preserve the
+assembled skeleton, headings, bullets, and final question.
 
 Prompts require Croatian, one concise sentence, evidence-grounded wording, no
 invented detections or priorities, and no numerical grade. Code excerpts are
@@ -271,11 +286,10 @@ line, missing token, exact problem, or correction. Reflection requests receive
 the selected reflection goal/topic and relevant evidence or syntax region and
 location cue. The compatibility request receives coding-standard findings.
 
-The prompt asks for text shorter than 400 characters. The server independently
-rejects empty text, multiline text, text over 600 characters, grade-like text
-matching its numeric-grade check, and reflection text that does not end in
-`?`. Invalid or failed section generation uses deterministic Croatian fallback
-text. Generated sections are first assembled in this order: praises, completion
+The prompt asks for text shorter than 400 characters. Reflection text must end
+in `?`, and shortened introductions must end in `!`. Invalid or failed section
+generation uses deterministic Croatian fallback text. Generated sections are
+first assembled in this order: praises, completion
 statement, main recommendation, additional recommendation, reflection question.
 For normal task feedback with more than one section, the server then makes one
 final `beautify` request containing only those validated section texts. The
