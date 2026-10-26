@@ -20,7 +20,7 @@ class TaskRepository(BaseRepository[Task]):
             self,
             *,
             skip: int = 0,
-            limit: int = 50,
+            limit: int = 250,
             active_only: Optional[bool] = None,
             search: Optional[str] = None,
             order_by_title: bool = True,

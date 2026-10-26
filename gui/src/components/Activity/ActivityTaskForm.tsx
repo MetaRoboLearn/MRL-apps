@@ -15,10 +15,10 @@ import { getProgrammingElements } from '../../api/programmingElementsApi.ts'
 import { ProgrammingElementSelector } from './ProgrammingElementSelector.tsx'
 import {RichTextEditor} from "../UI/RichTextEditor.tsx";
 
-const tasksQueryOptions = (search: string) =>
+const tasksQueryOptions = (search: string, loadAll: boolean) =>
   queryOptions({
-    queryKey: ['tasks-picker', search],
-    queryFn: () => getTasksPreview({ search: search || undefined, active_only: true, limit: 10 }),
+    queryKey: ['tasks-picker', search, loadAll],
+    queryFn: () => getTasksPreview({ search: search || undefined, active_only: true, limit: loadAll ? undefined : 10 }),
   })
 
 type ActivityTaskFormData = {
@@ -51,7 +51,8 @@ const programmingElementsQueryOptions = queryOptions({
 function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
-  const { data: tasks } = useSuspenseQuery(tasksQueryOptions(query))
+  const [loadAll, setLoadAll] = useState(false)
+  const { data: tasks } = useSuspenseQuery(tasksQueryOptions(query, loadAll))
 
   const columns = [
     columnHelper.accessor('id', { header: 'ID', cell: (info) => info.getValue() }),
@@ -134,6 +135,14 @@ function TaskPicker({ onSelect }: { onSelect: (task: TaskPreview) => void }) {
           </tbody>
         </table>
       </div>
+      {!loadAll && (
+        <button
+          onClick={() => setLoadAll(true)}
+          className="mt-3 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-sm rounded-md transition-colors"
+        >
+          Učitaj sve zadatke
+        </button>
+      )}
     </div>
   )
 }

@@ -55,7 +55,7 @@ def get_task(task_id: int):
 def list_tasks():
     # query params: ?skip=0&limit=50&active_only=true&search=loop&order_by_title=true
     skip = int(request.args.get("skip", 0))
-    limit = int(request.args.get("limit", 50))
+    limit = int(request.args.get("limit", 250))
 
     search = request.args.get("search")
 
