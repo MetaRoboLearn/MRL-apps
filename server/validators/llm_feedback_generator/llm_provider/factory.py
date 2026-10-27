@@ -10,6 +10,19 @@ from .protocol import FeedbackProvider, ProviderConfigurationError
 
 
 def create_provider(environ: Mapping[str, str] | None = None) -> FeedbackProvider:
+    """Construct the configured local or remote feedback provider.
+
+    Args:
+        environ: Optional settings mapping; when omitted, read provider settings from the process
+            environment. ``LLM_FEEDBACK_PROVIDER`` selects the adapter and the matching keys
+            provide its endpoint/model or credentials/model.
+
+    Returns:
+        A configured provider implementing the shared feedback interface.
+
+    Raises:
+        ProviderConfigurationError: If the provider name or required settings are invalid.
+    """
     settings = os.environ if environ is None else environ
     mode = settings.get("LLM_FEEDBACK_PROVIDER", "local").strip().lower()
 
@@ -42,5 +55,9 @@ def create_provider(environ: Mapping[str, str] | None = None) -> FeedbackProvide
 
 @lru_cache(maxsize=1)
 def get_provider() -> FeedbackProvider:
-    """Return one environment-configured provider per backend worker process."""
+    """Return the cached provider configured from this worker's environment.
+
+    Returns:
+        The single provider instance created for this backend worker process.
+    """
     return create_provider()

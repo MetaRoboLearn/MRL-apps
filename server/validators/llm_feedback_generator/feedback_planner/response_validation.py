@@ -15,7 +15,16 @@ def validate_safety_text(
     max_length: int,
     reject_newlines: bool,
 ) -> str | None:
-    """Apply mode-independent output safeguards before mode-specific validation."""
+    """Apply shared length, line-break, and grade checks before mode validation.
+
+    Args:
+        text: Raw provider output to normalize and inspect.
+        max_length: Character limit for this section or final response.
+        reject_newlines: Whether this response shape must fit on one line.
+
+    Returns:
+        Trimmed text when it passes every shared safeguard, otherwise None.
+    """
     normalized = text.strip()
     if not normalized or len(normalized) > max_length:
         return None

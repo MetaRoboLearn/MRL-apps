@@ -17,6 +17,14 @@ from .llm_provider import FeedbackProvider, ProviderError, get_provider
 def _generate_one(
     arguments: tuple[FeedbackProvider, GenerationRequest],
 ) -> tuple[str, str | None]:
+    """Send one request to its provider and convert provider errors to result data.
+
+    Args:
+        arguments: Provider/request pair; the request supplies both prompts to send.
+
+    Returns:
+        Generated text and no error kind, or empty text and the provider error kind.
+    """
     provider, request = arguments
     try:
         return provider.generate_text(request.system_prompt, request.user_prompt), None
@@ -29,6 +37,16 @@ def _validated_section(
     text: str,
     mode: PromptMode,
 ) -> str | None:
+    """Apply shared section safeguards followed by the selected mode's checks.
+
+    Args:
+        request: Section kind and context used for mode-specific validation.
+        text: Raw provider response to normalize and validate.
+        mode: Strategy whose section contract applies to this request.
+
+    Returns:
+        Accepted normalized section text, or None when either validation layer rejects it.
+    """
     normalized = validate_safety_text(text, max_length=600, reject_newlines=True)
     if normalized is None:
         return None
@@ -40,6 +58,16 @@ def _validated_final(
     draft: AnswerDraft,
     mode: PromptMode,
 ) -> str | None:
+    """Apply shared final-response safeguards and mode-specific draft validation.
+
+    Args:
+        text: Raw final-pass output from the provider.
+        draft: Original assembled answer and context needed to check edits.
+        mode: Strategy defining the final response's structure and content rules.
+
+    Returns:
+        Accepted normalized final text, or None so the caller retains the draft suggestion.
+    """
     normalized = validate_safety_text(
         text,
         max_length=2500,
@@ -60,7 +88,20 @@ def generate_feedback(
     provider: FeedbackProvider | None = None,
     answer_style: str | None = None,
 ) -> dict[str, Any]:
-    """Plan, generate, validate, and assemble one teacher-editable suggestion."""
+    """Create a teacher-editable suggestion from code analysis and one prompt strategy.
+
+    Args:
+        code: Submitted source being reviewed; blank or non-string input is rejected.
+        task_analysis: Expected elements, evidence, weighted coverage, and syntax findings.
+        code_standard_analysis: Optional compatibility findings used when no task plan exists.
+        task_title: Optional task name passed to prompts for goal-aware wording.
+        task_preview: Optional task description passed as behavior context.
+        provider: Optional provider override, primarily for tests or controlled callers.
+        answer_style: Optional explicit mode; otherwise read from backend configuration.
+
+    Returns:
+        Suggestion text and metadata describing any section/final-pass fallbacks.
+    """
     if not isinstance(code, str) or not code.strip():
         raise ValueError("code is required")
 

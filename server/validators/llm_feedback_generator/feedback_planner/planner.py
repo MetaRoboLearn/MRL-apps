@@ -4,6 +4,14 @@ from typing import Any
 
 
 def _ordered_elements(task_analysis: dict[str, Any]) -> list[dict[str, Any]]:
+    """Normalize and sort expected elements from task-analysis output.
+
+    Args:
+        task_analysis: Analysis mapping whose ``expected_elements`` list is read.
+
+    Returns:
+        Dictionary elements ordered by their planner ``position`` value.
+    """
     elements = task_analysis.get("expected_elements", [])
     if not isinstance(elements, list):
         return []
@@ -14,6 +22,14 @@ def _ordered_elements(task_analysis: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _plan_item(element: dict[str, Any]) -> dict[str, Any]:
+    """Project one analyzed element onto the stable feedback-plan item shape.
+
+    Args:
+        element: Expected-element record selected for a feedback section.
+
+    Returns:
+        The fields shared by recommendation, praise, and reflection planning.
+    """
     return {
         "kind": "element",
         "element_id": element.get("element_id"),
@@ -29,6 +45,15 @@ def _has_same_syntax_issue(
     element: dict[str, Any],
     syntax_error: dict[str, Any] | None,
 ) -> bool:
+    """Check whether element evidence overlaps the analyzer's syntax-error range.
+
+    Args:
+        element: Expected element whose evidence and issue labels are examined.
+        syntax_error: Analyzer report containing the message and source-line range.
+
+    Returns:
+        Whether matching syntax evidence overlaps the reported range.
+    """
     if not isinstance(syntax_error, dict):
         return False
 
@@ -62,6 +87,15 @@ def _syntax_region(
     expected_elements: list[dict[str, Any]],
     syntax_error: dict[str, Any] | None,
 ) -> str:
+    """Find the task-specific region associated with the syntax error.
+
+    Args:
+        expected_elements: Ordered task elements used to locate matching evidence.
+        syntax_error: Parser result whose line range is matched against that evidence.
+
+    Returns:
+        The matching feedback-region description, or a generic structural region.
+    """
     for element in expected_elements:
         if _has_same_syntax_issue(element, syntax_error):
             region = element.get("feedback_region_description")
@@ -74,6 +108,15 @@ def _syntax_recommendation(
     analysis: dict[str, Any],
     expected_elements: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
+    """Create the syntax error's main-recommendation item when syntax is invalid.
+
+    Args:
+        analysis: Task-analysis result containing syntax status and parser details.
+        expected_elements: Ordered elements used to find a task-specific syntax region.
+
+    Returns:
+        A syntax recommendation, or None when no syntax error was reported.
+    """
     syntax_error = analysis.get("syntax_error")
     if analysis.get("syntax_valid") is not False or not isinstance(syntax_error, dict):
         return None
@@ -91,6 +134,15 @@ def _syntax_recommendation(
 
 
 def _reflection_question(target: dict[str, Any], reflection_goal: str) -> dict[str, Any]:
+    """Build reflection context around the selected recommendation or element.
+
+    Args:
+        target: Plan item whose evidence and topic should guide reflection.
+        reflection_goal: Instructional purpose, such as addressing an issue or refining code.
+
+    Returns:
+        Context fields consumed by the reflection-question prompt.
+    """
     return {
         "reflection_goal": reflection_goal,
         "kind": target["kind"],
@@ -110,7 +162,15 @@ def build_feedback_plan(
     task_analysis: dict[str, Any] | None,
     code_standard_analysis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Select evidence-backed feedback sections without generating their wording."""
+    """Select evidence-backed feedback sections without generating their wording.
+
+    Args:
+        task_analysis: Expected elements, evidence, completion, and syntax findings.
+        code_standard_analysis: Optional compatibility findings used when no task elements exist.
+
+    Returns:
+        A mode-independent plan containing selected feedback items and source metadata.
+    """
     analysis = task_analysis if isinstance(task_analysis, dict) else {}
     expected_elements = _ordered_elements(analysis)
 

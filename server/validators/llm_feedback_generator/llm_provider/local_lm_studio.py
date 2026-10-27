@@ -14,6 +14,12 @@ class LocalLmStudioProvider:
     max_concurrent_requests = 4
 
     def __init__(self, api_base: str, model: str):
+        """Configure the local LM Studio endpoint and model lifecycle state.
+
+        Args:
+            api_base: LM Studio API base, converted to its chat endpoint for requests.
+            model: Model key used when checking, loading, chatting with, and unloading the model.
+        """
         self.api_url = api_base.replace("/v1", "/api/v1") + "/chat"
         self.model = model
         self._request_condition = threading.Condition()
@@ -21,17 +27,20 @@ class LocalLmStudioProvider:
         self._unloading = False
 
     def _begin_request(self) -> None:
+        """Register an active request, waiting while model unload is in progress."""
         with self._request_condition:
             while self._unloading:
                 self._request_condition.wait()
             self._active_requests += 1
 
     def _end_request(self) -> None:
+        """Release one active-request slot and wake threads waiting on lifecycle state."""
         with self._request_condition:
             self._active_requests -= 1
             self._request_condition.notify_all()
 
     def _unload_when_idle(self) -> None:
+        """Block new requests, wait for active ones, then unload and reopen the model gate."""
         with self._request_condition:
             self._unloading = True
             while self._active_requests:
@@ -44,6 +53,11 @@ class LocalLmStudioProvider:
                 self._request_condition.notify_all()
 
     def _ensure_model_loaded(self) -> None:
+        """Ensure the configured model is loaded, waiting for LM Studio readiness.
+
+        The model key and endpoint come from this provider instance; readiness polling uses those
+        values so concurrent requests share one serialized load operation.
+        """
         logger.debug("Ensuring LM Studio model is loaded: model=%s", self.model)
         with self._load_lock:
             models_url = self.api_url.replace("/chat", "/models")
@@ -82,6 +96,7 @@ class LocalLmStudioProvider:
             raise TimeoutError(f"Model {self.model} failed to load within {timeout_limit}s.")
 
     def unload_model(self) -> None:
+        """Ask LM Studio to unload this provider's configured model instance."""
         unload_url = self.api_url.replace("/chat", "/models/unload")
         try:
             requests.post(unload_url, json={"instance_id": self.model}, timeout=10.0)
@@ -90,6 +105,18 @@ class LocalLmStudioProvider:
             logger.warning("Could not unload LM Studio model: model=%s", self.model, exc_info=True)
 
     def generate_text(self, system_prompt: str, user_prompt: str) -> str:
+        """Send one prompt pair to the local chat endpoint, retrying transient connection failures.
+
+        Args:
+            system_prompt: Instructions controlling the generated section's behavior and format.
+            user_prompt: Serialized request context supplied as the model's user input.
+
+        Returns:
+            Non-empty message content with surrounding whitespace removed.
+
+        Raises:
+            ProviderError: When the request times out, is rejected, or returns unusable output.
+        """
         payload = {
             "model": self.model,
             "input": f"{system_prompt}\n\n{user_prompt}",

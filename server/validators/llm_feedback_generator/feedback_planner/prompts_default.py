@@ -112,6 +112,17 @@ def build_generation_request(
     instructions: str | None = None,
     additional_instruction: str | None = None,
 ) -> GenerationRequest:
+    """Create one provider request from a section kind and its context.
+
+    Args:
+        kind: Section type that selects the default instruction template.
+        context: Structured values serialized for the model and retained for fallbacks.
+        instructions: Optional full section instructions replacing the kind template.
+        additional_instruction: Optional extra system text appended after the selected template.
+
+    Returns:
+        A request with combined system instructions and JSON-serialized user context.
+    """
     section_instructions = instructions or _SECTION_INSTRUCTIONS[kind]
     system_prompt = (
         section_instructions
@@ -130,6 +141,15 @@ def build_generation_request(
 
 
 def _evidence_excerpt(item: dict[str, Any], code: str) -> list[str]:
+    """Extract unique code lines referenced by evidence and syntax metadata.
+
+    Args:
+        item: Plan item containing evidence line numbers or a syntax source line.
+        code: Submitted source text from which evidence line ranges are sliced.
+
+    Returns:
+        Unique source excerpts in the order they were encountered.
+    """
     lines = code.splitlines()
     excerpts = []
     for evidence in item.get("evidence", []):
@@ -149,6 +169,15 @@ def _evidence_excerpt(item: dict[str, Any], code: str) -> list[str]:
 
 
 def _task_context(task_title: str | None, task_preview: str | None) -> dict[str, str]:
+    """Normalize optional task metadata for inclusion in prompt context.
+
+    Args:
+        task_title: Optional task name that helps align wording to the goal.
+        task_preview: Optional task description that clarifies expected behavior.
+
+    Returns:
+        Only non-empty, trimmed task fields.
+    """
     context = {}
     if isinstance(task_title, str) and task_title.strip():
         context["task_title"] = task_title.strip()
@@ -158,6 +187,14 @@ def _task_context(task_title: str | None, task_preview: str | None) -> dict[str,
 
 
 def _syntax_line_range(item: dict[str, Any]) -> str:
+    """Format a syntax error's source line range as Croatian context text.
+
+    Args:
+        item: Plan item whose ``syntax_error`` holds line and end-line values.
+
+    Returns:
+        A single line reference, a range, or an unknown-line fallback.
+    """
     syntax_error = item.get("syntax_error")
     if not isinstance(syntax_error, dict):
         return "nepoznatom retku"
@@ -175,6 +212,17 @@ def _recommendation_context(
     task_title: str | None,
     task_preview: str | None,
 ) -> dict[str, Any]:
+    """Build the goal and evidence context for one recommendation item.
+
+    Args:
+        item: Selected plan item, including status, evidence, and optional syntax details.
+        code: Submitted source used to extract the item's evidence lines.
+        task_title: Optional title included to ground the recommendation in the goal.
+        task_preview: Optional description included to clarify task behavior.
+
+    Returns:
+        Context fields tailored to syntax, undetected, or observed-behavior guidance.
+    """
     if item.get("kind") == "syntax_error":
         return {
             "guidance_goal": "code_structure",
@@ -204,7 +252,18 @@ def _build_generation_requests(
     *,
     additional_instructions: Mapping[GenerationKind, str] | None = None,
 ) -> list[GenerationRequest]:
-    """Build section requests from a plan, keeping context data mode-independent."""
+    """Build one request for each selected plan section.
+
+    Args:
+        plan: Selected praise, recommendation, reflection, or compatibility items.
+        code: Submitted source used to extract relevant evidence.
+        task_title: Optional task title passed into relevant request contexts.
+        task_preview: Optional task description passed into relevant request contexts.
+        additional_instructions: Optional system-text additions keyed by generation kind.
+
+    Returns:
+        Requests in planner order; compatibility plans produce one compatibility request.
+    """
     if plan.get("source") == "coding_standard_compatibility":
         return [build_generation_request(
             "compatibility_comment",
@@ -212,6 +271,7 @@ def _build_generation_requests(
         )]
 
     def request(kind: GenerationKind, context: dict[str, Any]) -> GenerationRequest:
+        """Build one section request with any instruction configured for its kind."""
         return build_generation_request(
             kind,
             context,
@@ -254,11 +314,26 @@ def _build_generation_requests(
 
 
 def build_beautify_request(section_text: dict[str, Any]) -> GenerationRequest:
+    """Build the final prose request from validated feedback sections.
+
+    Args:
+        section_text: Section names mapped to their already checked wording.
+
+    Returns:
+        A beautify request whose context contains only those sections.
+    """
     return build_generation_request("beautify", {"sections": section_text})
 
 
 def fallback_text(request: GenerationRequest) -> str:
-    """Return deterministic Croatian wording using the request's structured context."""
+    """Return deterministic default wording for a failed generation request.
+
+    Args:
+        request: Failed section request; its kind and structured context select the fallback.
+
+    Returns:
+        Croatian fallback wording appropriate to that request's section and goal.
+    """
     if request.kind == "compatibility_comment":
         return "Pregledaj svoj kod i provjeri možeš li dodatno doraditi rješenje."
 
@@ -292,7 +367,19 @@ class DefaultPromptMode:
         *,
         additional_instructions: Mapping[GenerationKind, str] | None = None,
     ) -> list[GenerationRequest]:
-        """Build plan requests, appending optional instructions for selected kinds."""
+        """Build default requests from the planner's selected sections.
+
+        Args:
+            plan: Section selections and source metadata returned by the planner.
+            code: Submitted source used to extract evidence lines for prompts.
+            task_title: Optional task title included in goal-aware request contexts.
+            task_preview: Optional task description included in relevant request contexts.
+            task_analysis: Shared strategy-interface input; section selections are already in plan.
+            additional_instructions: Optional text appended to matching kinds' system prompts.
+
+        Returns:
+            One request per selected section, in the default generation order.
+        """
         return _build_generation_requests(
             plan,
             code,
@@ -302,6 +389,14 @@ class DefaultPromptMode:
         )
 
     def fallback_text(self, request: GenerationRequest) -> str:
+        """Resolve deterministic default wording from a failed request's context.
+
+        Args:
+            request: Failed section request containing its kind and structured context.
+
+        Returns:
+            The default Croatian fallback for that section and guidance goal.
+        """
         return fallback_text(request)
 
     def validate_section_response(
@@ -309,11 +404,28 @@ class DefaultPromptMode:
         request: GenerationRequest,
         normalized: str,
     ) -> str | None:
+        """Apply default section-specific punctuation checks after shared safeguards.
+
+        Args:
+            request: Request kind identifying special sections such as reflection questions.
+            normalized: Trimmed model response already checked for shared safety rules.
+
+        Returns:
+            The response when valid, or None when a reflection question lacks '?'.
+        """
         if request.kind == "reflection_question" and not normalized.endswith("?"):
             return None
         return normalized
 
     def early_response(self, plan: dict[str, Any]) -> dict[str, Any] | None:
+        """Preserve the provider-free default response for all-undetected task plans.
+
+        Args:
+            plan: Planner result whose source identifies the all-undetected special case.
+
+        Returns:
+            The established response for that case, or None when normal generation should continue.
+        """
         if plan.get("source") != "all_not_detected":
             return None
         return {
@@ -328,6 +440,15 @@ class DefaultPromptMode:
         answer: dict[str, Any],
         plan: dict[str, Any],
     ) -> AnswerDraft:
+        """Order default sections and optionally request a final prose pass.
+
+        Args:
+            answer: Generated or fallback wording grouped by section key.
+            plan: Source and completion fields controlling ordering and beautification.
+
+        Returns:
+            The assembled suggestion, plus a beautify request when multiple task sections exist.
+        """
         suggestion_parts = [*answer["praises"]]
         if answer["completion_statement"]:
             suggestion_parts.append(answer["completion_statement"])
@@ -358,6 +479,15 @@ class DefaultPromptMode:
         normalized: str,
         draft: AnswerDraft,
     ) -> str | None:
+        """Check the default beautifier's paragraph and reflection-order constraints.
+
+        Args:
+            normalized: Trimmed final-pass paragraph after shared safety checks.
+            draft: Original assembly, including the reflection question if one was selected.
+
+        Returns:
+            Accepted paragraph, or None when it breaks the default prose contract.
+        """
         if "\n" in normalized or "\r" in normalized:
             return None
         if len(_SENTENCE_END.findall(normalized)) < 2:

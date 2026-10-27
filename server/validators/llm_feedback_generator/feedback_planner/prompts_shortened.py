@@ -56,6 +56,14 @@ _WORD = re.compile(r"\w+")
 
 
 def build_introduction_request(opening_category: str) -> GenerationRequest:
+    """Build the shortened opening prompt for the selected coverage category.
+
+    Args:
+        opening_category: Coverage/praise label that constrains the intro's tone.
+
+    Returns:
+        One introduction request with the category stored in structured context.
+    """
     return prompts_default.build_generation_request(
         "introduction",
         {"opening_category": opening_category},
@@ -64,6 +72,14 @@ def build_introduction_request(opening_category: str) -> GenerationRequest:
 
 
 def build_shortened_beautify_request(structured_feedback: str) -> GenerationRequest:
+    """Build the final connector-only pass over an assembled shortened answer.
+
+    Args:
+        structured_feedback: Existing answer skeleton whose lines and content must be preserved.
+
+    Returns:
+        A request that may add limited connectors without changing the skeleton.
+    """
     return prompts_default.build_generation_request(
         "beautify_variant_2",
         {"structured_feedback": structured_feedback},
@@ -75,6 +91,15 @@ def _opening_category(
     feedback_plan: dict[str, Any],
     task_analysis: dict[str, Any] | None,
 ) -> str:
+    """Map completion and plan status to the shortened introduction category.
+
+    Args:
+        feedback_plan: Planner result; its completion statement identifies full detection.
+        task_analysis: Weighted completion used for the remaining coverage bands.
+
+    Returns:
+        One of the opening-category keys consumed by the intro prompt and fallbacks.
+    """
     if feedback_plan.get("completion_statement"):
         return "all_detected"
 
@@ -95,6 +120,15 @@ def _opening_category(
 
 
 def _only_connectors_added(original: str, candidate: str) -> bool:
+    """Check that candidate wording preserves source words and adds at most one connector.
+
+    Args:
+        original: Unmodified answer line whose words and order must remain present.
+        candidate: Model-edited line being checked for allowed connector insertions.
+
+    Returns:
+        True when all original word tokens remain in order and at most one connector was added.
+    """
     expected = _WORD.findall(original.lower())
     tokens = _WORD.findall(candidate.lower())
     position = 0
@@ -122,6 +156,19 @@ class ShortenedPromptMode(prompts_default.DefaultPromptMode):
         *,
         additional_instructions: Mapping[GenerationKind, str] | None = None,
     ) -> list[GenerationRequest]:
+        """Build shortened requests by adding an intro and concise per-kind wording.
+
+        Args:
+            plan: Selected plan items; compatibility plans retain default request behavior.
+            code: Submitted source used to extract section evidence.
+            task_title: Optional task name passed into common request context.
+            task_preview: Optional task description passed into common request context.
+            task_analysis: Coverage and syntax data used to choose the opening category.
+            additional_instructions: Caller-supplied per-kind additions to combine with concise text.
+
+        Returns:
+            The introduction followed by requests for the selected plan sections.
+        """
         if plan.get("source") == "coding_standard_compatibility":
             return super().build_generation_requests(
                 plan,
@@ -152,6 +199,14 @@ class ShortenedPromptMode(prompts_default.DefaultPromptMode):
         return [introduction, *requests]
 
     def fallback_text(self, request: GenerationRequest) -> str:
+        """Return shortened intro/skeleton fallbacks or delegate common section fallbacks.
+
+        Args:
+            request: Failed request whose kind and context select the fallback wording.
+
+        Returns:
+            Deterministic text for that request in shortened mode.
+        """
         if request.kind == "introduction":
             opening_category = request.context.get("opening_category")
             if not isinstance(opening_category, str):
@@ -169,6 +224,15 @@ class ShortenedPromptMode(prompts_default.DefaultPromptMode):
         request: GenerationRequest,
         normalized: str,
     ) -> str | None:
+        """Apply inherited checks plus the shortened introduction punctuation rule.
+
+        Args:
+            request: Generated section kind, including its opening category when relevant.
+            normalized: Trimmed section text that already passed shared safety checks.
+
+        Returns:
+            Accepted section text, or None when its mode-specific ending is invalid.
+        """
         validated = super().validate_section_response(request, normalized)
         if validated is None:
             return None
@@ -177,6 +241,14 @@ class ShortenedPromptMode(prompts_default.DefaultPromptMode):
         return validated
 
     def early_response(self, plan: dict[str, Any]) -> dict[str, Any] | None:
+        """Reserve the default all-undetected early response for the default mode.
+
+        Args:
+            plan: Selected plan used to distinguish task feedback from other sources.
+
+        Returns:
+            An inherited early response for other sources, or None to generate shortened task feedback.
+        """
         if plan.get("source") == "all_not_detected":
             return None
         return super().early_response(plan)
@@ -186,6 +258,15 @@ class ShortenedPromptMode(prompts_default.DefaultPromptMode):
         answer: dict[str, Any],
         plan: dict[str, Any],
     ) -> AnswerDraft:
+        """Assemble the shortened introduction and grouped feedback lines.
+
+        Args:
+            answer: Generated/fallback sections, including the shortened introduction.
+            plan: Source metadata used to route compatibility feedback to default assembly.
+
+        Returns:
+            A structured-line draft and optional connector-only final request.
+        """
         if plan.get("source") == "coding_standard_compatibility":
             return super().build_answer_draft(answer, plan)
 
@@ -226,6 +307,15 @@ class ShortenedPromptMode(prompts_default.DefaultPromptMode):
         normalized: str,
         draft: AnswerDraft,
     ) -> str | None:
+        """Validate the connector pass against the original shortened answer skeleton.
+
+        Args:
+            normalized: Trimmed final-pass output, split into candidate lines.
+            draft: Original skeleton and reflection index used for line-by-line comparison.
+
+        Returns:
+            Accepted output when structure/content constraints hold, otherwise None.
+        """
         skeleton = draft.validation_context["skeleton"]
         reflection_index = draft.validation_context["reflection_index"]
         output_lines = normalized.split("\n")

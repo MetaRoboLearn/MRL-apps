@@ -265,7 +265,7 @@ generate_text(system_prompt: str, user_prompt: str) -> str
 ```
 
 `prompts_orchestrator.py` resolves `FEEDBACK_GENERATOR_ANSWER_STYLE` once and
-delegates to the default or shortened prompt strategy. Both strategies consume
+delegates to the default, shortened, or compact prompt strategy. The strategies consume
 the same mode-independent feedback plan and own their prompt wording,
 deterministic fallbacks, mode-specific validation, and final answer structure.
 Shared output safeguards reject empty responses, section responses over 600
@@ -303,6 +303,17 @@ through the task-feedback beautifier.
 
 When `FEEDBACK_GENERATOR_ANSWER_STYLE` is `shortened` and the plan is task feedback (`task_analysis` or `all_not_detected`), the generator adds one `introduction` request. Its category is based on `task_analysis.weighted_completion`, rounded to a whole percentage like the student task card: below 40% is `low_coverage`, 40-79% is `moderate_coverage`, and 80% or higher is `high_coverage`. If the planner confirms that every expected element was detected, the category is `all_detected`, regardless of recommendations for other issues. If coverage is unavailable, the category is `coverage_unavailable` and the introduction should remain neutral. The praise, recommendation, and reflection sentences reuse the same per-section requests as `default`. The server merges validated sentences into the introduction, an optional `Ovo si dobro napravio:` bullet list, an optional `Ovo bi mogao bolje provjeriti:` bullet list, and a final reflection question. A `beautify_variant_2` request may only add simple Croatian connecting words. The server rejects output that changes line count, headings, bullet markers, the introduction, or the reflection's final `?`, or that adds content words; it then returns the merged text and records a fallback. In shortened mode, all-`not_detected` plans get one guidance recommendation and reflection instead of the provider-free encouragement message. The compatibility path keeps its default behavior.
 
+In `compact` mode, task feedback is one line of at most 160 characters,
+including exactly one emoji chosen to match the task title or preview. Response
+type follows weighted coverage: complete coverage can praise one evidence-backed
+detected element only when syntax is explicitly valid; high partial coverage
+gives a short progress statement and indirect hint; medium coverage gives a
+non-praising hint; low or unavailable coverage asks a task-aware question. A
+syntax error always disables praise and remains the selected main issue while
+coverage determines whether the answer is a hint or a question. Compact mode
+makes one generation request and skips final beautification. Coding-standard
+compatibility feedback retains default mode.
+
 Provider selection is deployment-side only:
 
 | Setting | Behavior |
@@ -312,7 +323,7 @@ Provider selection is deployment-side only:
 | `LLM_FEEDBACK_LOCAL_MODEL` | LM Studio model; defaults to `google/gemma-4-26b-a4b-qat` |
 | `LLM_FEEDBACK_GEMINI_API_KEY` | Required for `remote`; keep as a protected deployment secret |
 | `LLM_FEEDBACK_GEMINI_MODEL` | Required model ID for `remote` |
-| `FEEDBACK_GENERATOR_ANSWER_STYLE` | `default` (default) or `shortened`; missing or invalid values use `default` |
+| `FEEDBACK_GENERATOR_ANSWER_STYLE` | `default` (default), `shortened`, or `compact`; missing or invalid values use `default` |
 
 The provider factory caches one provider per backend worker process. Both
 adapters support up to four concurrent section requests. LM Studio retries a
