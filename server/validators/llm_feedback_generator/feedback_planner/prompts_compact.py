@@ -57,6 +57,15 @@ _RESPONSE_INSTRUCTIONS = {
         "konstrukciju, funkciju ili identifikator koji treba dodati, ni otkriti točnu izmjenu "
         "ili rješenje."
     ),
+    "starting_point": (
+        "Napiši jednu konkretnu početnu rečenicu kao izjavu, ne pitanje. Odaberi prvu vidljivu "
+        "radnju ili odluku koja proizlazi iz task_title ili task_preview i usmjerava prema cilju. "
+        "Govori što treba započeti ili utvrditi u samom zadatku, ne kako to kodirati. Primjer: "
+        "'Za početak odredi kojoj životinji robot treba dostaviti sijeno. 🐑' Prilagodi primjer "
+        "stvarnom zadatku i nemoj spominjati životinje ako nisu relevantne. Nemoj dati generičku "
+        "motivacijsku frazu poput 'Krenimo korak po korak', postaviti pitanje, imenovati petlju, "
+        "funkciju ili identifikator, predložiti točnu izmjenu, hvaliti učenika ni otkriti rješenje."
+    ),
     "question": (
         "Napiši jedno kratko, otvoreno pitanje koje učenika navodi da sam razmisli o cilju zadatka "
         "i odabranom dijelu. Nemoj hvaliti učenika, imenovati točnu izmjenu ni otkriti rješenje."
@@ -175,13 +184,14 @@ def _coverage_evidence(task_analysis: dict[str, Any] | None) -> dict[str, Any]:
 def _response_type(
     task_analysis: dict[str, Any] | None,
 ) -> str:
-    """Choose praise, hint, or question from weighted coverage and praise safeguards.
+    """Choose the compact response branch from coverage, evidence, and syntax status.
 
     Args:
         task_analysis: Weighted completion, element evidence, and syntax status for the task.
 
     Returns:
-        ``praise`` only for complete evidence-backed valid code; otherwise a coverage-band type.
+        Praise for complete valid code, a starter when nothing is detected and syntax is valid,
+        or the coverage-band response type.
     """
     completion = _coverage_fraction(task_analysis)
     complete = (
@@ -191,6 +201,8 @@ def _response_type(
     )
     if complete:
         return "praise"
+    if completion==0 and not _has_syntax_error(task_analysis):
+        return "starting_point"
     if completion is None:
         return "question"
 
@@ -506,6 +518,18 @@ class CompactPromptMode(DefaultPromptMode):
             if majority_detected:
                 return "Većina traženih dijelova je pronađena; istraži još jedan korak. 🔎"
             return "Istraži još jedan korak prema cilju zadatka. 🔎"
+        if response_type == "starting_point":
+            task_goal = request.context.get("task_preview") or request.context.get("task_title")
+            if isinstance(task_goal, str) and task_goal.strip():
+                task_goal = " ".join(task_goal.split()).strip(" .!?")
+                prefix = "Za početak, usmjeri se na cilj: "
+                suffix = ". 🌱"
+                available_length = _MAX_COMPACT_LENGTH - len(prefix) - len(suffix)
+                if len(task_goal) > available_length:
+                    task_goal = task_goal[:available_length].rsplit(" ", 1)[0].rstrip(" ,;:")
+                if task_goal:
+                    return f"{prefix}{task_goal}{suffix}"
+            return "Za početak odredi prvu radnju za cilj zadatka. 🌱"
         if response_type == "medium_hint":
             if syntax_issue:
                 return "Prouči kako je ovaj dio složen i kako se uklapa u zadatak. 🔎"
@@ -545,6 +569,9 @@ class CompactPromptMode(DefaultPromptMode):
                 return None
         elif response_type == "praise":
             if not body.endswith((".", "!")):
+                return None
+        elif response_type == "starting_point":
+            if not body.endswith((".", "!")) or _PRAISE_WORDS.search(body):
                 return None
         else:
             if not body.endswith((".", "!")) or _PRAISE_WORDS.search(body):
